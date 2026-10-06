@@ -1,165 +1,137 @@
 import React from 'react';
-import { Shield, AlertTriangle, Heart, Calendar, Smile, Pill, Users, Bell, User, Settings, LogOut } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Shield, AlertTriangle, Heart, Calendar, Smile, Pill, Users, MapPin, Stethoscope, ChevronRight, Activity } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Card from '../../components/common/Card';
+import Badge from '../../components/common/Badge';
 import { useAuth } from '../../context/AuthContext';
 
 const DashboardPage = () => {
-  const { user, logout } = useAuth();
+  const { user, userProfile } = useAuth();
+  const userName = userProfile?.fullName || 'User';
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--color-background)', display: 'flex' }}>
-      {/* Sidebar Placeholder */}
-      <aside
+    <div>
+      {/* Welcome Header */}
+      <div style={{ marginBottom: '2rem' }}>
+        <Badge variant="primary" icon={Shield}>
+          Authenticated Dashboard
+        </Badge>
+        <h1 style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-primary)', margin: '0.5rem 0' }}>
+          Welcome back, {userName} 👋
+        </h1>
+        <p style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem' }}>
+          Your safety, health, and wellbeing at a glance.
+        </p>
+      </div>
+
+      {/* Emergency SOS High-Visibility Banner */}
+      <div
+        className="glass-card"
         style={{
-          width: '260px',
-          backgroundColor: '#FFFFFF',
-          borderRight: '1px solid var(--color-accent)',
-          padding: '2rem 1.25rem',
+          padding: '1.75rem 2rem',
+          marginBottom: '2rem',
+          background: 'linear-gradient(135deg, #FFFFFF 0%, rgba(253, 242, 242, 0.85) 100%)',
+          border: '2px solid rgba(217, 45, 58, 0.25)',
           display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'space-between'
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1.25rem',
+          boxShadow: 'var(--shadow-lg)'
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '2.5rem' }}>
-            <div
-              style={{
-                width: '2.25rem',
-                height: '2.25rem',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-primary)',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}
-            >
-              <Shield size={20} />
-            </div>
-            <span style={{ fontFamily: 'var(--font-heading)', fontSize: '1.35rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-              Secure<span style={{ color: 'var(--color-secondary)' }}>Her</span>
-            </span>
-          </div>
+          <Badge variant="emergency" icon={AlertTriangle}>
+            Instant Protection
+          </Badge>
+          <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)', margin: '0.35rem 0' }}>
+            Emergency SOS Action Ready
+          </h3>
+          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.925rem' }}>
+            Press and hold for 3 seconds to dispatch live location alerts to your contacts.
+          </p>
+        </div>
+        <Link to="/safety/sos">
+          <Button variant="emergency" size="lg" icon={AlertTriangle}>
+            Activate SOS Mode
+          </Button>
+        </Link>
+      </div>
 
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-            {[
-              { label: 'Dashboard', icon: Shield, active: true },
-              { label: 'Safety & SOS', icon: AlertTriangle },
-              { label: 'Health Tracker', icon: Heart },
-              { label: 'Community', icon: Users },
-              { label: 'Notifications', icon: Bell },
-              { label: 'Profile', icon: User },
-              { label: 'Settings', icon: Settings },
-            ].map((item) => {
-              const Icon = item.icon;
-              return (
-                <div
-                  key={item.label}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                    padding: '0.75rem 1rem',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: item.active ? 'var(--color-accent)' : 'transparent',
-                    color: item.active ? 'var(--color-primary)' : 'var(--color-text-muted)',
-                    fontWeight: item.active ? 700 : 600,
-                    cursor: 'pointer'
-                  }}
-                >
-                  <Icon size={18} />
-                  <span>{item.label}</span>
+      {/* Overview Cards Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+        <Card hoverEffect={true}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Safety Score</span>
+            <Shield size={20} color="var(--color-secondary)" />
+          </div>
+          <h2 style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>92 / 100</h2>
+          <p style={{ fontSize: '0.85rem', color: '#2E7D32', fontWeight: 600, marginTop: '0.35rem' }}>
+            ✓ Emergency Circle Configured
+          </p>
+        </Card>
+
+        <Card hoverEffect={true}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Cycle Phase</span>
+            <Activity size={20} color="var(--color-health)" />
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>Follicular Phase</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
+            Day 9 of 28 • Rising Energy
+          </p>
+        </Card>
+
+        <Card hoverEffect={true}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Medications</span>
+            <Pill size={20} color="var(--color-secondary)" />
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--color-primary)' }}>1 Pending</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-secondary)', fontWeight: 600, marginTop: '0.35rem' }}>
+            Iron & Folic Acid (02:00 PM)
+          </p>
+        </Card>
+
+        <Card hoverEffect={true}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase' }}>Appointment</span>
+            <Stethoscope size={20} color="var(--color-primary)" />
+          </div>
+          <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-primary)' }}>Oct 18, 2026</h2>
+          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.35rem' }}>
+            Dr. Sarah Jenkins (Gynecologist)
+          </p>
+        </Card>
+      </div>
+
+      {/* Quick Access Links */}
+      <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--color-primary)', marginBottom: '1rem' }}>
+        Quick Navigation Modules
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+        {[
+          { label: 'Emergency Contacts', path: '/safety/contacts', icon: Users, color: 'var(--color-secondary)' },
+          { label: 'Live Location Sharing', path: '/safety/location', icon: MapPin, color: 'var(--color-primary)' },
+          { label: 'Period Tracker', path: '/health/period', icon: Calendar, color: 'var(--color-health)' },
+          { label: 'Mood Journal', path: '/health/mood', icon: Smile, color: 'var(--color-secondary)' },
+          { label: 'Community Threads', path: '/community', icon: Users, color: 'var(--color-primary)' }
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link key={item.path} to={item.path} style={{ textDecoration: 'none' }}>
+              <Card hoverEffect={true} padding="md" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <Icon size={20} color={item.color} />
+                  <span style={{ fontSize: '0.925rem', fontWeight: 700, color: 'var(--color-primary)' }}>{item.label}</span>
                 </div>
-              );
-            })}
-          </nav>
-        </div>
-
-        <Button variant="ghost" icon={LogOut} onClick={logout} fullWidth>
-          Log Out
-        </Button>
-      </aside>
-
-      {/* Main Content Area */}
-      <main style={{ flex: 1, padding: '2.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--color-primary)' }}>
-              Good Day, {user?.fullName || 'User'} 👋
-            </h1>
-            <p style={{ color: 'var(--color-text-muted)', fontSize: '1rem' }}>
-              Your safety and wellbeing at a glance.
-            </p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div
-              style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-accent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-primary)'
-              }}
-            >
-              <Bell size={20} />
-            </div>
-            <div
-              style={{
-                width: '2.5rem',
-                height: '2.5rem',
-                borderRadius: '50%',
-                backgroundColor: 'var(--color-secondary)',
-                color: '#FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontWeight: 700
-              }}
-            >
-              {(user?.fullName || 'U').charAt(0)}
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Grid Placeholder */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem' }}>
-          <Card hoverEffect={false}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>Safety Score</span>
-              <Shield size={20} color="var(--color-secondary)" />
-            </div>
-            <h2 style={{ fontSize: '2.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>88 / 100</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-secondary)', marginTop: '0.5rem' }}>
-              ✓ 2 Emergency contacts configured
-            </p>
-          </Card>
-
-          <Card hoverEffect={false}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>Cycle Status</span>
-              <Heart size={20} color="var(--color-health)" />
-            </div>
-            <h2 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-primary)' }}>Follicular Phase</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.5rem' }}>
-              Estimated Day 9 of 28
-            </p>
-          </Card>
-
-          <Card hoverEffect={false}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <span style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-text-muted)' }}>Emergency SOS</span>
-              <AlertTriangle size={20} color="var(--color-emergency)" />
-            </div>
-            <Button variant="emergency" fullWidth size="md" icon={AlertTriangle}>
-              Hold SOS Button
-            </Button>
-          </Card>
-        </div>
-      </main>
+                <ChevronRight size={16} color="var(--color-text-light)" />
+              </Card>
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 };
