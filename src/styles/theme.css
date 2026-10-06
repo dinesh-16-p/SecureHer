@@ -1,0 +1,43 @@
+:root {
+  --color-primary: #5B214F;
+  --color-primary-light: #7A326B;
+  --color-primary-dark: #3F1437;
+  
+  --color-secondary: #C75B7A;
+  --color-secondary-light: #D87B95;
+  --color-secondary-dark: #A43F5C;
+  
+  --color-accent: #F6DDE5;
+  --color-accent-light: #FDF2F5;
+  
+  --color-background: #FFF9FB;
+  --color-card: #FFFFFF;
+  
+  --color-text: #29212A;
+  --color-text-muted: #6E6170;
+  --color-text-light: #9C909F;
+  
+  --color-health: #9B6B8F;
+  --color-health-light: #F3EAF0;
+  
+  --color-emergency: #D92D3A;
+  --color-emergency-hover: #B8222E;
+  --color-emergency-bg: #FDF2F2;
+
+  --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --shadow-sm: 0 2px 8px rgba(91, 33, 79, 0.04);
+  --shadow-md: 0 6px 20px rgba(91, 33, 79, 0.08);
+  --shadow-lg: 0 12px 32px rgba(91, 33, 79, 0.12);
+  --shadow-glow: 0 0 25px rgba(199, 91, 122, 0.25);
+  --shadow-sos: 0 0 30px rgba(217, 45, 58, 0.35);
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-full: 9999px;
+
+  --transition-fast: 0.2s ease;
+  --transition-normal: 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
