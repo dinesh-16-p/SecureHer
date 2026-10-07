@@ -240,10 +240,13 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
     }
 
     try:
+        logger.info(f"Dispatching SOS email via Brevo → sender: {BREVO_SENDER_EMAIL} → recipient: {recipient_email}")
         response = requests.post(brevo_url, json=payload, headers=headers, timeout=10)
+        logger.info(f"Brevo response status: {response.status_code}")
         if response.status_code in [200, 201, 202]:
             resp_data = response.json() if response.text else {}
             message_id = resp_data.get("messageId", "ok")
+            logger.info(f"Brevo SOS email sent successfully. messageId={message_id}")
             return {
                 "success": True,
                 "emailStatus": "sent",
@@ -253,21 +256,24 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
                 "recipient": recipient_email
             }
         else:
+            brevo_error = response.text[:500] if response.text else "(empty response)"
+            logger.error(f"Brevo rejected SOS email. Status {response.status_code}: {brevo_error}")
             return {
                 "success": False,
                 "emailStatus": "failed",
                 "locationStatus": location_status,
-                "error": f"Brevo returned status {response.status_code}: {response.text}",
-                "message": "Brevo email delivery failed. Please verify BREVO_SENDER_EMAIL in your Brevo account.",
+                "error": f"Brevo API returned HTTP {response.status_code}",
+                "message": f"Email delivery failed (Brevo HTTP {response.status_code}). Verify BREVO_SENDER_EMAIL is a verified sender in your Brevo account.",
                 "recipient": recipient_email
             }
     except Exception as e:
+        logger.error(f"Brevo connection error during SOS dispatch: {e}")
         return {
             "success": False,
             "emailStatus": "failed",
             "locationStatus": location_status,
             "error": str(e),
-            "message": f"Connection error while sending email: {str(e)}"
+            "message": f"Connection error while contacting Brevo: {str(e)}"
         }
 
 @app.post("/api/ai")
