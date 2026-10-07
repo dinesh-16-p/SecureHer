@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import MobileBottomNav from './MobileBottomNav';
+import SecureHerAI from '../ai/SecureHerAI';
 
 const AppLayout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -27,6 +28,9 @@ const AppLayout = ({ children }) => {
           {children}
         </main>
       </div>
+
+      {/* Floating AI Assistant */}
+      <SecureHerAI />
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />

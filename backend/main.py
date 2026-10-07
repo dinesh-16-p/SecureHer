@@ -1,11 +1,11 @@
 import os
 import sys
 import logging
-from typing import Optional
+from typing import Optional, Dict, Any
 from datetime import datetime
-from fastapi import FastAPI, HTTPException, Header, status, Depends
+from fastapi import FastAPI, HTTPException, Header, status
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 import requests
 from dotenv import load_dotenv
 
@@ -18,16 +18,21 @@ logging.basicConfig(
 logger = logging.getLogger("secureher.backend")
 
 # Load environment variables
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+root_dir = os.path.dirname(backend_dir)
+load_dotenv(os.path.join(backend_dir, ".env"))
+load_dotenv(os.path.join(root_dir, ".env.local"))
 load_dotenv()
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "").strip()
 BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "SecureHer Emergency Dispatch").strip()
-FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "").strip()
+FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", os.getenv("VITE_FIREBASE_API_KEY", "")).strip()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 app = FastAPI(
-    title="SecureHer Safety Backend API",
-    description="Emergency SOS alert dispatch and notification verification service",
+    title="SecureHer Safety & AI Backend API",
+    description="Emergency SOS alert dispatch, notification verification, and AI safety router",
     version="1.0.0"
 )
 
@@ -39,14 +44,15 @@ origins = [
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
     "https://her-a955f.web.app",
-    "https://her-a955f.firebaseapp.com"
+    "https://her-a955f.firebaseapp.com",
+    "*"
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -60,11 +66,11 @@ class SOSRequest(BaseModel):
     userPhone: Optional[str] = ""
     timestamp: Optional[str] = None
 
+class AIRequest(BaseModel):
+    prompt: str
+    userContext: Optional[Dict[str, Any]] = None
+
 def verify_firebase_token(auth_header: Optional[str]) -> Optional[dict]:
-    """
-    Verifies Firebase ID token if provided.
-    Extracts authenticated user UID and email.
-    """
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
 
@@ -72,7 +78,6 @@ def verify_firebase_token(auth_header: Optional[str]) -> Optional[dict]:
     if not token or len(token) < 20:
         return None
 
-    # Verify token using Google Identity Toolkit REST API
     verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={FIREBASE_API_KEY}" if FIREBASE_API_KEY else "https://identitytoolkit.googleapis.com/v1/accounts:lookup"
     try:
         res = requests.post(verify_url, json={"idToken": token}, timeout=5)
@@ -81,54 +86,48 @@ def verify_firebase_token(auth_header: Optional[str]) -> Optional[dict]:
             users = data.get("users", [])
             if users:
                 user_info = users[0]
-                logger.info(f"Verified Firebase user UID: {user_info.get('localId')}")
                 return {
                     "uid": user_info.get("localId"),
                     "email": user_info.get("email"),
                     "displayName": user_info.get("displayName")
                 }
     except Exception as e:
-        logger.warning(f"Firebase token verification error (continuing with payload): {e}")
+        logger.warning(f"Firebase token verification note: {e}")
 
     return None
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint to verify backend connectivity and Brevo readiness"""
+    """Health check endpoint verifying backend connectivity, Brevo, and Gemini readiness"""
     brevo_configured = bool(BREVO_API_KEY and len(BREVO_API_KEY) > 10 and BREVO_SENDER_EMAIL)
+    gemini_configured = bool(GEMINI_API_KEY and len(GEMINI_API_KEY) > 10)
     return {
         "status": "healthy",
         "service": "SecureHer Safety Backend",
         "version": "1.0.0",
         "brevoConfigured": brevo_configured,
         "senderConfigured": bool(BREVO_SENDER_EMAIL),
+        "geminiConfigured": gemini_configured,
         "timestamp": datetime.utcnow().isoformat()
     }
 
 @app.post("/api/sos")
 def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None)):
     """
-    Dispatches real emergency SOS email to the authenticated user's configured emergency contact via Brevo API.
+    Dispatches real emergency SOS email to the user's configured emergency contact via Brevo API.
     """
     logger.info("Received SOS alert request")
 
-    # Verify Firebase Authentication
     auth_user = verify_firebase_token(authorization)
-    if auth_user:
-        user_name = auth_user.get("displayName") or req.userName or "SecureHer User"
-    else:
-        user_name = req.userName or "SecureHer User"
+    user_name = auth_user.get("displayName") if auth_user and auth_user.get("displayName") else (req.userName or "SecureHer User")
 
-    # Determine Recipient Email
     recipient_email = (req.recipientEmail or "").strip()
     if not recipient_email or "@" not in recipient_email:
-        logger.warning("SOS rejected: No emergency contact email provided")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No emergency contact email is configured. Please configure an emergency contact in SecureHer."
+            detail="No emergency contact email provided. Please configure an emergency contact in SecureHer."
         )
 
-    # Location Formatting
     map_link = ""
     location_text = "GPS coordinates not available"
     location_status = "unavailable"
@@ -139,9 +138,8 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
 
     formatted_time = req.timestamp or datetime.now().strftime("%B %d, %Y at %I:%M %p")
 
-    # Email Subject & HTML Template
     subject = f"🚨 SECUREHER EMERGENCY ALERT — {user_name} activated SOS!"
-    
+
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -207,18 +205,15 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
     </html>
     """
 
-    # Validate Brevo API Configuration
     if not BREVO_API_KEY or not BREVO_SENDER_EMAIL:
-        logger.error("Brevo credentials missing in backend environment variables")
         return {
             "success": False,
             "emailStatus": "failed",
             "locationStatus": location_status,
-            "message": "Brevo email API is not configured on the backend server (BREVO_API_KEY / BREVO_SENDER_EMAIL missing). Please check backend/.env.",
+            "message": "Brevo email API is not configured on the backend server. Set BREVO_API_KEY & BREVO_SENDER_EMAIL in backend/.env.",
             "recipient": recipient_email
         }
 
-    # Dispatch email via Brevo REST API
     brevo_url = "https://api.brevo.com/v3/smtp/email"
     headers = {
         "accept": "application/json",
@@ -242,13 +237,10 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
     }
 
     try:
-        logger.info(f"Sending SOS alert via Brevo to {recipient_email}...")
         response = requests.post(brevo_url, json=payload, headers=headers, timeout=10)
-
         if response.status_code in [200, 201, 202]:
             resp_data = response.json() if response.text else {}
             message_id = resp_data.get("messageId", "ok")
-            logger.info(f"Brevo email delivered successfully (messageId: {message_id})")
             return {
                 "success": True,
                 "emailStatus": "sent",
@@ -258,17 +250,15 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
                 "recipient": recipient_email
             }
         else:
-            logger.error(f"Brevo API error ({response.status_code}): {response.text}")
             return {
                 "success": False,
                 "emailStatus": "failed",
                 "locationStatus": location_status,
                 "error": f"Brevo returned status {response.status_code}: {response.text}",
-                "message": "Brevo email delivery failed. Please verify that BREVO_SENDER_EMAIL is a verified sender in your Brevo account.",
+                "message": "Brevo email delivery failed. Please verify BREVO_SENDER_EMAIL in your Brevo account.",
                 "recipient": recipient_email
             }
     except Exception as e:
-        logger.error(f"Brevo connection exception: {str(e)}")
         return {
             "success": False,
             "emailStatus": "failed",
@@ -276,6 +266,80 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
             "error": str(e),
             "message": f"Connection error while sending email: {str(e)}"
         }
+
+@app.post("/api/ai")
+def secureher_ai_router(req: AIRequest, authorization: Optional[str] = Header(None)):
+    """
+    SecureHer Hybrid AI Router:
+    1. Controlled Safety Layer: Checks prompt against deterministic safety/health/feature procedures.
+    2. Gemini Fallback: Routes open-ended wellness queries to Gemini API securely on backend.
+    """
+    prompt_lower = (req.prompt or "").lower().strip()
+    if not prompt_lower:
+        raise HTTPException(status_code=400, detail="Prompt query is required.")
+
+    # 1. Controlled Safety Router Layer
+    if any(k in prompt_lower for k in ["sos", "danger", "help me", "emergency", "followed", "threat", "scared", "stalking"]):
+        return {
+            "source": "controlled_safety_layer",
+            "reply": "🚨 **IMMEDIATE EMERGENCY GUIDANCE:** If you are in immediate danger, please press the **Emergency SOS button** in SecureHer or call national emergency services at **112** (or 1091 Women Helpline). Move toward a well-lit, public area with people or security personnel immediately."
+        }
+
+    if any(k in prompt_lower for k in ["contact", "add mother", "emergency contact"]):
+        return {
+            "source": "controlled_safety_layer",
+            "reply": "👥 **Emergency Contacts Guide:** Go to **Safety → Emergency Contacts** to add or update trusted family/friends. Their emails will receive your live GPS coordinates during an SOS dispatch."
+        }
+
+    if any(k in prompt_lower for k in ["period", "cycle", "ovulation", "menstruation", "follicular", "luteal"]):
+        ctx_day = req.userContext.get("currentDay") if req.userContext else None
+        phase_text = f" (Your current recorded phase is {req.userContext.get('phase')})" if req.userContext and req.userContext.get('phase') else ""
+        return {
+            "source": "controlled_safety_layer",
+            "reply": f"🌸 **Cycle Tracking Assistance:**{phase_text} Log your period start date under **Health → Period Tracker** to calculate your cycle phase, ovulation window, and upcoming period predictions."
+        }
+
+    if any(k in prompt_lower for k in ["camera", "evidence", "record photo", "video"]):
+        return {
+            "source": "controlled_safety_layer",
+            "reply": "📸 **Incident Evidence Vault:** Open **Safety → Evidence Camera** to take discreet photo snapshots or video recordings. All media is encrypted and stored locally on your device for absolute privacy."
+        }
+
+    # 2. Open-ended Gemini API Layer
+    if GEMINI_API_KEY:
+        try:
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+            system_instruction = "You are SecureHer AI, a compassionate, supportive wellness assistant for women's safety, mental health, and physical health. Provide concise, clear, and empowering answers. Never give medical diagnoses or claim to replace emergency services."
+
+            gemini_payload = {
+                "contents": [
+                    {
+                        "parts": [
+                            {"text": f"{system_instruction}\nUser question: {req.prompt}"}
+                        ]
+                    }
+                ]
+            }
+
+            res = requests.post(gemini_url, json=gemini_payload, timeout=8)
+            if res.status_code == 200:
+                data = res.json()
+                candidates = data.get("candidates", [])
+                if candidates:
+                    parts = candidates[0].get("content", {}).get("parts", [])
+                    if parts:
+                        return {
+                            "source": "gemini_api",
+                            "reply": parts[0].get("text", "").strip()
+                        }
+        except Exception as e:
+            logger.warning(f"Gemini API query error: {e}")
+
+    # Fallback response when Gemini key is not set or unavailable
+    return {
+        "source": "secureher_assistant",
+        "reply": f"I am your SecureHer Safety & Health Assistant. For urgent situations, use **Emergency SOS** or call **112**. For feature guidance, navigate using the sidebar to explore Safety, Health, Community, and Settings."
+    }
 
 if __name__ == "__main__":
     import uvicorn

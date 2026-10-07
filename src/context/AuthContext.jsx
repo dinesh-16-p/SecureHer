@@ -173,6 +173,15 @@ export const AuthProvider = ({ children }) => {
     await sendPasswordResetEmail(auth, email);
   };
 
+  // Update User Profile
+  const updateUserProfile = async (updates) => {
+    if (!user) return;
+    const userDocRef = doc(db, 'users', user.uid);
+    const updatedData = { ...updates, updatedAt: serverTimestamp() };
+    await setDoc(userDocRef, updatedData, { merge: true });
+    setUserProfile(prev => ({ ...prev, ...updates }));
+  };
+
   const value = {
     user,
     userProfile,
@@ -181,7 +190,8 @@ export const AuthProvider = ({ children }) => {
     signup,
     googleLogin,
     logout,
-    resetPassword
+    resetPassword,
+    updateUserProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -1,27 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Calendar, MapPin, Edit3, Save, X, Shield, Heart, Camera } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import { useAuth } from '../../context/AuthContext';
+import { useSafety } from '../../context/SafetyContext';
 
 const ProfilePage = () => {
-  const { user, userProfile } = useAuth();
+  const { user, userProfile, updateUserProfile } = useAuth();
+  const { emergencyContacts } = useSafety();
   const [editMode, setEditMode] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState('');
+
   const [form, setForm] = useState({
-    fullName: userProfile?.fullName || 'Priya Sharma',
-    email: user?.email || 'priya@example.com',
-    phone: userProfile?.phone || '+91 98765 43210',
-    city: 'Hyderabad, Telangana',
-    dob: '1999-05-15',
+    fullName: '',
+    email: '',
+    phone: '',
+    city: '',
+    dob: '',
     bloodGroup: 'B+'
   });
-  const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    setEditMode(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+  useEffect(() => {
+    setForm({
+      fullName: userProfile?.fullName || user?.displayName || '',
+      email: user?.email || '',
+      phone: userProfile?.phone || user?.phoneNumber || '',
+      city: userProfile?.city || '',
+      dob: userProfile?.dob || '',
+      bloodGroup: userProfile?.bloodGroup || 'B+'
+    });
+  }, [user, userProfile]);
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await updateUserProfile({
+        fullName: form.fullName,
+        phone: form.phone,
+        city: form.city,
+        dob: form.dob,
+        bloodGroup: form.bloodGroup
+      });
+      setEditMode(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
+    } catch (err) {
+      console.error('Error updating profile:', err);
+      setError('Failed to save profile changes. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const InputRow = ({ label, field, icon: Icon, type = 'text', readOnly = false }) => (
@@ -33,7 +65,7 @@ const ProfilePage = () => {
         <Icon size={16} color="var(--color-secondary)" style={{ position: 'absolute', left: '0.875rem', top: '50%', transform: 'translateY(-50%)' }} />
         <input
           type={type}
-          value={form[field]}
+          value={form[field] || ''}
           onChange={e => setForm(prev => ({ ...prev, [field]: e.target.value }))}
           disabled={!editMode || readOnly}
           style={{
@@ -54,6 +86,8 @@ const ProfilePage = () => {
       </div>
     </div>
   );
+
+  const initialLetter = (form.fullName || form.email || 'U').charAt(0).toUpperCase();
 
   return (
     <div>
@@ -79,29 +113,24 @@ const ProfilePage = () => {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '2.5rem', fontWeight: 800, color: '#fff', margin: '0 auto'
               }}>
-                {form.fullName?.charAt(0) || 'P'}
+                {userProfile?.profileImage ? (
+                  <img src={userProfile.profileImage} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                ) : initialLetter}
               </div>
-              <button style={{
-                position: 'absolute', bottom: 0, right: 0,
-                width: '32px', height: '32px', borderRadius: '50%',
-                background: 'var(--color-secondary)', border: '3px solid #fff',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer'
-              }}>
-                <Camera size={14} color="#fff" />
-              </button>
             </div>
             <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--color-primary)', margin: '0 0 0.25rem' }}>
-              {form.fullName}
+              {form.fullName || 'SecureHer User'}
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', margin: 0 }}>{form.email}</p>
 
             <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.625rem 0', borderTop: '1px solid rgba(246,221,229,0.6)' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                  <Shield size={13} color="var(--color-primary)" /> Safety Score
+                  <Shield size={13} color="var(--color-primary)" /> Safety Circle Status
                 </span>
-                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2E7D32' }}>92/100</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: emergencyContacts.length > 0 ? '#2E7D32' : '#D92D3A' }}>
+                  {emergencyContacts.length > 0 ? `${emergencyContacts.length} Contact(s)` : 'No Contacts'}
+                </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0.625rem 0', borderTop: '1px solid rgba(246,221,229,0.6)' }}>
                 <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -123,8 +152,10 @@ const ProfilePage = () => {
               <Button variant="outline" size="sm" icon={Edit3} onClick={() => setEditMode(true)}>Edit</Button>
             ) : (
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Button variant="ghost" size="sm" icon={X} onClick={() => setEditMode(false)}>Cancel</Button>
-                <Button variant="primary" size="sm" icon={Save} onClick={handleSave}>Save Changes</Button>
+                <Button variant="ghost" size="sm" icon={X} onClick={() => setEditMode(false)} disabled={saving}>Cancel</Button>
+                <Button variant="primary" size="sm" icon={Save} onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </Button>
               </div>
             )}
           </div>
@@ -135,7 +166,17 @@ const ProfilePage = () => {
               borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem',
               fontSize: '0.875rem', color: '#2E7D32', fontWeight: 600
             }}>
-              ✓ Profile updated successfully!
+              ✓ Profile updated successfully in Firestore!
+            </div>
+          )}
+
+          {error && (
+            <div style={{
+              background: 'rgba(217,45,58,0.1)', border: '1px solid rgba(217,45,58,0.3)',
+              borderRadius: '10px', padding: '0.75rem 1rem', marginBottom: '1rem',
+              fontSize: '0.875rem', color: '#D92D3A', fontWeight: 600
+            }}>
+              {error}
             </div>
           )}
 
