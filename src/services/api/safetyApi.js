@@ -8,10 +8,11 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 export const checkBackendHealth = async () => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
 
     const response = await fetch(`${API_BASE_URL}/api/health`, {
       method: 'GET',
+      headers: { 'Accept': 'application/json' },
       signal: controller.signal
     });
     clearTimeout(timeoutId);
@@ -20,19 +21,20 @@ export const checkBackendHealth = async () => {
       const data = await response.json();
       return { available: true, data };
     }
-    return { available: false, error: 'Non-200 response from backend' };
+    return { available: false, error: `Backend responded with HTTP ${response.status}` };
   } catch (err) {
-    return { available: false, error: err.message };
+    return { available: false, error: err.message || 'Backend unreachable' };
   }
 };
 
 export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recipientEmail, recipientName, userName, userPhone }) => {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
 
     const headers = {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
     };
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -59,20 +61,27 @@ export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recip
 
     const result = await response.json().catch(() => ({}));
 
-    if (response.ok && result.success) {
+    if (response.ok && result.success && result.emailStatus === 'sent') {
       return {
         success: true,
         backendAvailable: true,
         emailSent: true,
-        message: result.message || 'SOS alert email dispatched successfully.',
+        emailStatus: 'sent',
+        locationStatus: result.locationStatus || (latitude ? 'available' : 'unavailable'),
+        messageId: result.messageId,
+        message: result.message || `Emergency alert email sent to ${recipientEmail}`,
         data: result
       };
     } else {
+      const errorDetail = result.detail || result.error || result.message || 'Email delivery could not be confirmed.';
       return {
         success: false,
         backendAvailable: true,
         emailSent: false,
-        message: result.detail || result.message || 'Failed to dispatch SOS alert email.',
+        emailStatus: 'failed',
+        locationStatus: latitude ? 'available' : 'unavailable',
+        message: errorDetail,
+        error: errorDetail,
         data: result
       };
     }
@@ -81,7 +90,9 @@ export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recip
       success: false,
       backendAvailable: false,
       emailSent: false,
-      message: 'SOS backend email service is currently unreachable. Please call your emergency contacts or helplines directly.',
+      emailStatus: 'unreachable',
+      locationStatus: latitude ? 'available' : 'unavailable',
+      message: 'FastAPI backend service is currently unreachable. Please contact your emergency contact directly or call 112.',
       error: err.message
     };
   }

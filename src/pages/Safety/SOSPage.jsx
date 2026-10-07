@@ -267,11 +267,13 @@ const SOSPage = () => {
                 </span>
                 {sosStatus.emailSent ? (
                   <span style={{ color: '#2E7D32', fontWeight: 700 }}>
-                    Sent ✓ ({primaryEmergencyContact?.email})
+                    Delivered ✓ ({primaryEmergencyContact?.email})
                   </span>
                 ) : (
                   <span style={{ color: 'var(--color-emergency)', fontWeight: 600 }}>
-                    {primaryEmergencyContact ? `Dispatched (${primaryEmergencyContact.email})` : 'No email configured'}
+                    {primaryEmergencyContact
+                      ? `Delivery Unconfirmed ✗ (${primaryEmergencyContact.email})`
+                      : 'No email configured'}
                   </span>
                 )}
               </div>
