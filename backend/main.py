@@ -18,16 +18,17 @@ logging.basicConfig(
 logger = logging.getLogger("secureher.backend")
 
 # Load environment variables
-backend_dir = os.path.dirname(os.path.abspath(__file__))
-root_dir = os.path.dirname(backend_dir)
-load_dotenv(os.path.join(backend_dir, ".env"))
-load_dotenv(os.path.join(root_dir, ".env.local"))
-load_dotenv()
+# In production (Vercel/Cloud Run), env vars are injected directly — dotenv is a dev-only fallback.
+try:
+    load_dotenv()  # Loads .env if present locally — silently ignored on Vercel
+except Exception:
+    pass
 
 BREVO_API_KEY = os.getenv("BREVO_API_KEY", "").strip()
 BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "").strip()
 BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "SecureHer Emergency Dispatch").strip()
-FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", os.getenv("VITE_FIREBASE_API_KEY", "")).strip()
+# FIREBASE_API_KEY is the Web API Key (NOT a service account). Used to verify Firebase ID tokens.
+FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 
 app = FastAPI(
@@ -36,16 +37,17 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS Configuration for local development and Firebase Hosting domains
+# CORS Configuration — explicit allowed origins only (no wildcard in production)
 origins = [
+    # Production Firebase Hosting
+    "https://her-a955f.web.app",
+    "https://her-a955f.firebaseapp.com",
+    # Local development
     "http://localhost:5173",
     "http://localhost:3000",
     "http://localhost:4173",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
-    "https://her-a955f.web.app",
-    "https://her-a955f.firebaseapp.com",
-    "*"
 ]
 
 app.add_middleware(
@@ -343,4 +345,6 @@ def secureher_ai_router(req: AIRequest, authorization: Optional[str] = Header(No
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Use PORT env var for Cloud Run / Vercel local dev compatibility
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
