@@ -17,7 +17,8 @@ import {
   User,
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Camera
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -38,6 +39,7 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
         { label: 'Safety & SOS', path: '/safety', icon: Shield, exact: true },
         { label: 'Emergency Contacts', path: '/safety/contacts', icon: Users },
         { label: 'Live Location', path: '/safety/location', icon: MapPin },
+        { label: 'Evidence Camera', path: '/safety/evidence', icon: Camera },
         { label: 'Helplines', path: '/safety/helplines', icon: PhoneCall }
       ]
     },

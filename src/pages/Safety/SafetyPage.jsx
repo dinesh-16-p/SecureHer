@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, AlertTriangle, Users, MapPin, PhoneCall, ChevronRight, CheckCircle2 } from 'lucide-react';
+import { Shield, AlertTriangle, Users, MapPin, PhoneCall, ChevronRight, CheckCircle2, Camera, Lock } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
@@ -27,6 +27,20 @@ const SafetyPage = () => {
       icon: MapPin,
       color: 'var(--color-primary)',
       desc: 'Share continuous live location links with trusted friends and track route deviations.'
+    },
+    {
+      title: 'Incident Evidence Camera',
+      path: '/safety/evidence',
+      icon: Camera,
+      color: 'var(--color-emergency)',
+      desc: 'Discreet photo and video recording preserved in your encrypted local browser storage.'
+    },
+    {
+      title: 'Evidence Vault & History',
+      path: '/safety/evidence-history',
+      icon: Lock,
+      color: 'var(--color-primary)',
+      desc: 'Access saved emergency photos, videos, and GPS watermark records privately.'
     },
     {
       title: 'Emergency Helplines',

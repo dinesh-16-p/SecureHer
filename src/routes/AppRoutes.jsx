@@ -13,6 +13,8 @@ import SOSPage from '../pages/Safety/SOSPage';
 import EmergencyContactsPage from '../pages/Safety/EmergencyContactsPage';
 import LocationPage from '../pages/Safety/LocationPage';
 import HelplinesPage from '../pages/Safety/HelplinesPage';
+import EvidenceCameraPage from '../pages/Safety/EvidenceCameraPage';
+import EvidenceHistoryPage from '../pages/Safety/EvidenceHistoryPage';
 
 import HealthPage from '../pages/Health/HealthPage';
 import PeriodTrackerPage from '../pages/Health/PeriodTrackerPage';
@@ -32,13 +34,8 @@ import AppLayout from '../components/layout/AppLayout';
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Public Landing & Sub-sections */}
+      {/* Public Landing */}
       <Route path="/" element={<LandingPage />} />
-      <Route path="/features" element={<LandingPage />} />
-      <Route path="/safety" element={<LandingPage />} />
-      <Route path="/health" element={<LandingPage />} />
-      <Route path="/community" element={<LandingPage />} />
-      <Route path="/about" element={<LandingPage />} />
 
       {/* Public Auth Routes */}
       <Route
@@ -108,6 +105,26 @@ const AppRoutes = () => {
           <ProtectedRoute>
             <AppLayout>
               <LocationPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/safety/evidence"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <EvidenceCameraPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/safety/evidence-history"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <EvidenceHistoryPage />
             </AppLayout>
           </ProtectedRoute>
         }
