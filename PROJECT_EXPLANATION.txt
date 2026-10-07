@@ -1,0 +1,189 @@
+================================================================================
+                    SECUREHER — FINAL YEAR ACADEMIC PROJECT
+                 PROJECT ARCHITECTURE & TECHNICAL DOCUMENTATION
+================================================================================
+
+1. PROJECT OVERVIEW
+--------------------------------------------------------------------------------
+Project Title   : SecureHer — AI-Based Women Safety & Health Application
+Tagline         : Your Safety. Your Health. Your Community.
+Project Type    : Final Year Academic Engineering Project (Single Page Web Application)
+Live Web URL    : https://her-a955f.web.app
+GitHub Repo     : https://github.com/dinesh-16-p/SecureHer.git
+
+Description:
+SecureHer is a production-quality, web-based platform engineered to integrate 
+physical women safety, real-time emergency alert broadcasting, reproductive 
+health tracking, and peer community support into a single unified solution.
+
+
+2. PROGRAMMING LANGUAGES USED
+--------------------------------------------------------------------------------
+• JavaScript (ES6+):
+  The primary programming language used for all application logic, React component 
+  rendering, state management, asynchronous API operations (Promises/async-await), 
+  and Firebase backend interaction.
+
+• JSX (JavaScript XML):
+  Syntax extension for React that allows writing HTML-like structure directly 
+  within JavaScript component files.
+
+• HTML5:
+  Used for root webpage structure (`index.html`), accessibility labels (ARIA attributes), 
+  viewport configuration, and document metadata.
+
+• CSS3 (Vanilla CSS & CSS Modules):
+  Used for custom design system variables (`:root` tokens), responsive Flexbox and 
+  CSS Grid layouts, typography sizing via `clamp()`, glassmorphism UI effects 
+  (`backdrop-filter`), and CSS keyframe animations (`@keyframes`).
+
+• JSON (JavaScript Object Notation) & Security Rules Syntax:
+  Used for project configuration (`package.json`, `firebase.json`) and Firebase 
+  Security Rules definitions (`firestore.rules`, `storage.rules`).
+
+
+3. TECHNOLOGIES, FRAMEWORKS & LIBRARIES (RESOURCES USED)
+--------------------------------------------------------------------------------
+• React (v18.3):
+  A component-based frontend JavaScript library used for building interactive 
+  and responsive Single Page Applications (SPA).
+
+• Vite (v5.2):
+  A fast build tool and development server using native ES modules to optimize 
+  development speed and generate production bundles.
+
+• React Router DOM (v6.23):
+  Client-side routing library managing navigation between public landing pages 
+  and protected authenticated dashboard modules without full page reloads.
+
+• Firebase Modular SDK (v10.12):
+  - Firebase Authentication: Handles Email/Password signups, logins, password resets, 
+    and Google OAuth sign-in (`GoogleAuthProvider`).
+  - Cloud Firestore: A scalable NoSQL cloud database storing user profiles, 
+    emergency contact circles, health logs, and community posts.
+  - Firebase Storage: Cloud storage for user profile images and emergency 
+    evidence files.
+  - Firebase Hosting: Worldwide CDN deployment hosting the live application 
+    at https://her-a955f.web.app.
+
+• Lucide React (v0.378):
+  A comprehensive icon library providing icons for navigation, emergency SOS, 
+  and health metrics.
+
+• Google Fonts:
+  Selected modern typography — `Outfit` (Heading Font) and `Plus Jakarta Sans` 
+  (Body Font).
+
+• MapTiler API:
+  Integrated geospatial mapping service used for live location visualization 
+  and geofencing coordinates.
+
+
+4. KEY IMPLEMENTED FUNCTIONS & MODULES
+--------------------------------------------------------------------------------
+
+A. AUTHENTICATION & PROFILE SYSTEM (`src/context/AuthContext.jsx`)
+   • `signup(userData)`:
+     Registers new user using Firebase Auth (`createUserWithEmailAndPassword`), 
+     creates user profile document in Firestore (`users/{uid}`), and saves 
+     initial emergency contact in `users/{uid}/emergencyContacts`.
+
+   • `login(email, password)`:
+     Authenticates existing user using `signInWithEmailAndPassword`.
+
+   • `googleLogin()`:
+     Authenticates user via Google popup (`signInWithPopup`), auto-creating 
+     or merging Firestore user profile information.
+
+   • `logout()`:
+     Terminates session safely using `signOut(auth)`.
+
+   • `resetPassword(email)`:
+     Triggers password reset emails using `sendPasswordResetEmail`.
+
+   • `parseAuthError(error)`:
+     Helper function converting raw Firebase Auth error codes (e.g. `auth/user-not-found`, 
+     `auth/email-already-in-use`) into friendly user notifications.
+
+B. ROUTING & ACCESS CONTROL (`src/routes/ProtectedRoute.jsx` & `AppRoutes.jsx`)
+   • `ProtectedRoute`:
+     Guards private routes (`/dashboard`, `/safety/*`, `/health/*`, `/community`, 
+     `/notifications`, `/profile`, `/settings`), redirecting unauthenticated users 
+     to `/login`.
+
+   • `PublicOnlyRoute`:
+     Redirects authenticated users away from `/login` and `/signup` to `/dashboard`.
+
+C. SAFETY & EMERGENCY MODULES (`src/pages/Safety/`)
+   • `SOSPage.jsx`:
+     Features a 3-second hold-to-activate SOS button preventing accidental triggers. 
+     Activates live GPS coordinate broadcasting and updates emergency alert status.
+
+   • `EmergencyContactsPage.jsx`:
+     Allows users to add, edit, and prioritize emergency contacts (Name, Relationship, 
+     Phone, Email).
+
+   • `LocationPage.jsx`:
+     Displays live geolocation coordinates (Latitude/Longitude), route deviation 
+     monitors, and live trip link sharing controls.
+
+   • `HelplinesPage.jsx`:
+     Provides one-tap direct calling links (`tel:`) to verified emergency services:
+     112 (National Emergency), 1091 (Women Helpline), 100 (Police), 1930 (Cyber Crime).
+
+D. WOMEN'S HEALTH & CYCLE MODULES (`src/pages/Health/`)
+   • `PeriodTrackerPage.jsx`:
+     Calculates current cycle day, estimated next period window, and highlights 
+     the 4 cycle phases (Menstrual, Follicular, Ovulation, Luteal).
+
+   • `HealthCalendarPage.jsx`:
+     Unified monthly calendar combining cycle windows, mood snapshots, medication 
+     logs, and doctor appointments.
+
+   • `MoodPage.jsx`:
+     7-day emotional journaling system (Happy, Calm, Neutral, Stressed, Tired, Sad) 
+     with symptom notes and mood trend analytics.
+
+   • `MedicationPage.jsx`:
+     Daily prescription intake logger with taken/pending status toggles and custom 
+     reminder times.
+
+   • `AppointmentsPage.jsx`:
+     Specialist doctor consultation scheduler tracking doctor names, specialties, 
+     dates, times, and venue details.
+
+E. COMMUNITY & NOTIFICATIONS (`src/pages/Community/` & `src/pages/Notifications/`)
+   • `CommunityPage.jsx`:
+     Peer support thread system supporting verified handles or anonymous posting, 
+     ensuring zero public location exposure.
+
+   • `NotificationsPage.jsx`:
+     Alert center displaying safety warnings, period phase transitions, and 
+     medication reminders.
+
+
+5. DESIGN SYSTEM & COLOR PALETTE
+--------------------------------------------------------------------------------
+The application uses a refined, non-childish color system designed specifically 
+for healthcare and safety software:
+• Primary (Deep Plum):        #5B214F
+• Secondary (Elegant Rose):   #C75B7A
+• Accent (Soft Blush):        #F6DDE5
+• Background (Warm Off-White): #FFF9FB
+• Card (Pure White):          #FFFFFF
+• Text (Deep Charcoal):       #29212A
+• Health Accent (Soft Mauve): #9B6B8F
+• Emergency (Emergency Red):  #D92D3A (Used exclusively for SOS actions)
+
+
+6. DATABASE SECURITY & PRIVACY RULES (`firestore.rules` & `storage.rules`)
+--------------------------------------------------------------------------------
+• Strict Data Ownership:
+  Firestore and Storage security rules enforce `request.auth.uid == uid`, ensuring 
+  no user can view or edit another user's health logs, emergency contacts, or 
+  private profile details.
+
+
+================================================================================
+              DOCUMENTATION CREATED FOR PROFESSOR PRESENTATION
+================================================================================

@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "her-a955f",
     "public": "dist",
     "ignore": [
       "firebase.json",
