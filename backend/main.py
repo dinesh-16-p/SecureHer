@@ -34,7 +34,8 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
 app = FastAPI(
     title="SecureHer Safety & AI Backend API",
     description="Emergency SOS alert dispatch, notification verification, and AI safety router",
-    version="1.0.0"
+    version="1.1.0"
+
 )
 
 # CORS Configuration — explicit allowed origins only (no wildcard in production)
