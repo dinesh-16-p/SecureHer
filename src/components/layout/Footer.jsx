@@ -87,13 +87,13 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Safety & Health */}
+          {/* Security Features */}
           <div>
             <h4 style={{ color: '#FFFFFF', fontSize: '1.1rem', marginBottom: '1.25rem', fontFamily: 'var(--font-heading)' }}>
-              Safety & Health
+              Security Modules
             </h4>
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {['Emergency SOS', 'Live GPS Sharing', 'Cycle & Period Tracker', 'Mood Journaling', 'Medication Reminders', 'Verified Helplines'].map((item) => (
+              {['Emergency SOS Broadcast', 'Trusted Journey Tracking', 'Nearby Emergency Services', 'Tamper-Evident Evidence Vault', 'Safety Incident Reporting', 'Fake Call & Escape Mode', 'Verified Helplines'].map((item) => (
                 <li key={item}>
                   <a
                     href="#safety"

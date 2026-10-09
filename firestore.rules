@@ -21,6 +21,16 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
 
+      // User Trusted Journeys
+      match /journeys/{journeyId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
+      // User Safety Incident Reports
+      match /incidentReports/{reportId} {
+        allow read, write: if request.auth != null && request.auth.uid == uid;
+      }
+
       // User Notifications
       match /notifications/{notificationId} {
         allow read, write: if request.auth != null && request.auth.uid == uid;

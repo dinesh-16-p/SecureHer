@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShieldAlert, HeartHandshake, EyeOff, Cpu, BellRing, Lock } from 'lucide-react';
+import { ShieldAlert, Navigation, EyeOff, Lock, BellRing, Building } from 'lucide-react';
 import SectionHeading from '../../components/common/SectionHeading';
 import Card from '../../components/common/Card';
 
@@ -7,26 +7,26 @@ const WhySection = () => {
   const pillars = [
     {
       icon: ShieldAlert,
-      title: 'Unified Safety & Health',
-      description: 'Women no longer need separate apps for emergency response and reproductive health. SecureHer integrates both seamlessly.',
+      title: 'Dedicated Security Focus',
+      description: 'Engineered solely for women’s safety with zero clutter: fast emergency dispatch, trusted travel tracking, and private recordkeeping.',
       color: 'var(--color-primary)'
     },
     {
-      icon: Cpu,
-      title: 'Intelligent AI Assistance',
-      description: 'Advanced risk evaluation and intelligent anomaly detection keep emergency contacts informed before situations escalate.',
+      icon: Navigation,
+      title: 'Trusted Journey Tracking',
+      description: 'Continuous travel updates, arrival estimations, and automated check-ins keep your trusted circle informed during transit.',
       color: 'var(--color-secondary)'
     },
     {
-      icon: EyeOff,
-      title: 'Privacy First Architecture',
-      description: 'Your health data and location history are strictly private. Zero third-party data tracking or selling.',
+      icon: Lock,
+      title: 'Tamper-Evident Evidence',
+      description: 'Web Crypto SHA-256 integrity verification guarantees that incident recordings cannot be modified undetected.',
       color: 'var(--color-health)'
     },
     {
       icon: BellRing,
       title: 'Instant 1-Tap SOS Dispatch',
-      description: 'Hold the emergency SOS button for 2-3 seconds to broadcast live coordinates and alert trusted emergency contacts.',
+      description: 'Hold the emergency SOS button for 3 seconds to broadcast live GPS coordinates via verified Brevo email dispatchers.',
       color: 'var(--color-emergency)'
     }
   ];
@@ -46,8 +46,8 @@ const WhySection = () => {
           badgeText="Why SecureHer?"
           badgeIcon={Lock}
           badgeVariant="primary"
-          title="Designed for Total Peace of Mind"
-          subtitle="Combining advanced emergency protection with comprehensive wellness tracking, built exclusively for modern women."
+          title="Engineered for Real-World Security"
+          subtitle="Combining rapid emergency dispatch, verified geographic safety data, and cryptographic evidence preservation."
         />
 
         <div

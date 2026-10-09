@@ -69,6 +69,18 @@ class SOSRequest(BaseModel):
     userPhone: Optional[str] = ""
     timestamp: Optional[str] = None
 
+class JourneyShareRequest(BaseModel):
+    journeyTitle: str
+    destinationLabel: str
+    status: Optional[str] = "active"
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    expectedArrivalAt: Optional[str] = None
+    recipientEmail: str
+    recipientName: Optional[str] = None
+    userName: Optional[str] = "SecureHer User"
+    notes: Optional[str] = None
+
 class AIRequest(BaseModel):
     prompt: str
     userContext: Optional[Dict[str, Any]] = None
@@ -106,8 +118,8 @@ def health_check():
     gemini_configured = bool(GEMINI_API_KEY and len(GEMINI_API_KEY) > 10)
     return {
         "status": "healthy",
-        "service": "SecureHer Safety Backend",
-        "version": "1.0.0",
+        "service": "SecureHer Women's Security Backend",
+        "version": "1.2.0",
         "brevoConfigured": brevo_configured,
         "senderConfigured": bool(BREVO_SENDER_EMAIL),
         "geminiConfigured": gemini_configured,
@@ -276,12 +288,147 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
             "message": f"Connection error while contacting Brevo: {str(e)}"
         }
 
+@app.post("/api/journey/share")
+def share_journey_update(req: JourneyShareRequest, authorization: Optional[str] = Header(None)):
+    """
+    Sends a real journey progress / check-in notification to a trusted contact via Brevo email.
+    """
+    logger.info("Received Journey share request")
+
+    auth_user = verify_firebase_token(authorization)
+    user_name = auth_user.get("displayName") if auth_user and auth_user.get("displayName") else (req.userName or "SecureHer User")
+
+    recipient_email = (req.recipientEmail or "").strip()
+    if not recipient_email or "@" not in recipient_email:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Valid recipient email is required."
+        )
+
+    map_link = ""
+    location_text = "Live GPS coordinates pending"
+    if req.latitude is not None and req.longitude is not None:
+        location_text = f"{req.latitude:.5f}° N, {req.longitude:.5f}° E"
+        map_link = f"https://www.google.com/maps?q={req.latitude},{req.longitude}"
+
+    status_badge = req.status.upper() if req.status else "ACTIVE"
+    subject = f"🛡️ SECUREHER JOURNEY UPDATE — {user_name} shared trip: {req.journeyTitle}"
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #FFF9FB; margin: 0; padding: 20px; }}
+        .card {{ max-width: 580px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border: 1px solid #F6DDE5; box-shadow: 0 8px 30px rgba(91, 33, 79, 0.08); overflow: hidden; }}
+        .header {{ background: linear-gradient(135deg, #5B214F, #C75B7A); color: #FFFFFF; padding: 25px; text-align: center; }}
+        .body {{ padding: 30px; color: #29212A; line-height: 1.6; }}
+        .status-box {{ background: #F6DDE5; border-left: 4px solid #C75B7A; padding: 15px; border-radius: 6px; margin-bottom: 20px; }}
+        .info-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F6DDE5; font-size: 14px; }}
+        .btn {{ display: inline-block; background-color: #5B214F; color: #FFFFFF !important; font-weight: bold; text-decoration: none; padding: 12px 24px; border-radius: 8px; margin-top: 20px; text-align: center; font-size: 15px; }}
+        .footer {{ background-color: #F8F5F7; padding: 15px; text-align: center; font-size: 12px; color: #8F7084; }}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">
+          <h1 style="margin:0; font-size: 22px;">🛡️ Trusted Journey Update</h1>
+          <p style="margin: 5px 0 0 0; opacity: 0.9;">SecureHer Women Safety Network</p>
+        </div>
+        <div class="body">
+          <div class="status-box">
+            <strong style="color: #5B214F; font-size: 15px;">{user_name} has shared their journey progress with you.</strong>
+            <p style="margin: 5px 0 0 0; font-size: 14px; color: #5B214F;">
+              Trip status: <strong>{status_badge}</strong>
+            </p>
+          </div>
+
+          <div style="margin-bottom: 20px;">
+            <div class="info-row">
+              <strong>Journey:</strong>
+              <span>{req.journeyTitle}</span>
+            </div>
+            <div class="info-row">
+              <strong>Destination:</strong>
+              <span>{req.destinationLabel or 'Not specified'}</span>
+            </div>
+            {f'<div class="info-row"><strong>Expected Arrival:</strong><span>{req.expectedArrivalAt}</span></div>' if req.expectedArrivalAt else ''}
+            <div class="info-row">
+              <strong>Latest Location:</strong>
+              <span>{location_text}</span>
+            </div>
+          </div>
+
+          {f'<div style="text-align: center;"><a href="{map_link}" class="btn" target="_blank">📍 View Location on Map</a></div>' if map_link else ''}
+        </div>
+        <div class="footer">
+          Dispatched by SecureHer AI-Based Women's Security Application.
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
+    if not BREVO_API_KEY or not BREVO_SENDER_EMAIL:
+        return {
+            "success": False,
+            "emailStatus": "failed",
+            "message": "Brevo email API is not configured on the backend server.",
+            "recipient": recipient_email
+        }
+
+    brevo_url = "https://api.brevo.com/v3/smtp/email"
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+
+    payload = {
+        "sender": {
+            "name": BREVO_SENDER_NAME or "SecureHer Safety Dispatch",
+            "email": BREVO_SENDER_EMAIL
+        },
+        "to": [
+            {
+                "email": recipient_email,
+                "name": req.recipientName or recipient_email
+            }
+        ],
+        "subject": subject,
+        "htmlContent": html_content
+    }
+
+    try:
+        response = requests.post(brevo_url, json=payload, headers=headers, timeout=10)
+        if response.status_code in [200, 201, 202]:
+            resp_data = response.json() if response.text else {}
+            return {
+                "success": True,
+                "emailStatus": "sent",
+                "messageId": resp_data.get("messageId", "ok"),
+                "message": f"Journey progress shared with {recipient_email}."
+            }
+        else:
+            return {
+                "success": False,
+                "emailStatus": "failed",
+                "message": f"Brevo email failed with status {response.status_code}"
+            }
+    except Exception as e:
+        return {
+            "success": False,
+            "emailStatus": "failed",
+            "error": str(e)
+        }
+
 @app.post("/api/ai")
 def secureher_ai_router(req: AIRequest, authorization: Optional[str] = Header(None)):
     """
-    SecureHer Hybrid AI Router:
-    1. Controlled Safety Layer: Checks prompt against deterministic safety/health/feature procedures.
-    2. Gemini Fallback: Routes open-ended wellness queries to Gemini API securely on backend.
+    SecureHer Hybrid AI Security Router:
+    1. Controlled Safety Layer: Checks prompt against deterministic security, journey, evidence, and emergency procedures.
+    2. Gemini Fallback: Routes open-ended women's safety queries to Gemini API securely on backend.
     """
     prompt_lower = (req.prompt or "").lower().strip()
     if not prompt_lower:
@@ -291,34 +438,50 @@ def secureher_ai_router(req: AIRequest, authorization: Optional[str] = Header(No
     if any(k in prompt_lower for k in ["sos", "danger", "help me", "emergency", "followed", "threat", "scared", "stalking"]):
         return {
             "source": "controlled_safety_layer",
-            "reply": "🚨 **IMMEDIATE EMERGENCY GUIDANCE:** If you are in immediate danger, please press the **Emergency SOS button** in SecureHer or call national emergency services at **112** (or 1091 Women Helpline). Move toward a well-lit, public area with people or security personnel immediately."
+            "reply": "🚨 **IMMEDIATE EMERGENCY GUIDANCE:** If you are in danger, immediately activate the **Emergency SOS button** in SecureHer or call national emergency services at **112** (or 1091 Women Helpline). Move toward a well-lit public area with people or security personnel immediately."
         }
 
     if any(k in prompt_lower for k in ["contact", "add mother", "emergency contact"]):
         return {
             "source": "controlled_safety_layer",
-            "reply": "👥 **Emergency Contacts Guide:** Go to **Safety → Emergency Contacts** to add or update trusted family/friends. Their emails will receive your live GPS coordinates during an SOS dispatch."
+            "reply": "👥 **Emergency Contacts Guide:** Go to **Safety → Emergency Contacts** to configure trusted family and friends. Their emails receive your live GPS coordinates during an SOS broadcast."
         }
 
-    if any(k in prompt_lower for k in ["period", "cycle", "ovulation", "menstruation", "follicular", "luteal"]):
-        ctx_day = req.userContext.get("currentDay") if req.userContext else None
-        phase_text = f" (Your current recorded phase is {req.userContext.get('phase')})" if req.userContext and req.userContext.get('phase') else ""
+    if any(k in prompt_lower for k in ["journey", "track trip", "travel", "commute", "arrival"]):
         return {
             "source": "controlled_safety_layer",
-            "reply": f"🌸 **Cycle Tracking Assistance:**{phase_text} Log your period start date under **Health → Period Tracker** to calculate your cycle phase, ovulation window, and upcoming period predictions."
+            "reply": "🚗 **Trusted Journey Tracking:** Open **Safety → Trusted Journey** to plan your trip, set your expected arrival time, and share real-time GPS check-ins with your emergency contacts."
         }
 
-    if any(k in prompt_lower for k in ["camera", "evidence", "record photo", "video"]):
+    if any(k in prompt_lower for k in ["nearby", "police", "hospital", "station", "fire", "emergency service"]):
         return {
             "source": "controlled_safety_layer",
-            "reply": "📸 **Incident Evidence Vault:** Open **Safety → Evidence Camera** to take discreet photo snapshots or video recordings. All media is encrypted and stored locally on your device for absolute privacy."
+            "reply": "🏥 **Nearby Emergency Services:** Go to **Safety → Nearby Emergency Services** to discover verified police stations, hospitals, and fire services within your radius with 1-tap call and directions."
+        }
+
+    if any(k in prompt_lower for k in ["camera", "evidence", "vault", "integrity", "hash", "sha"]):
+        return {
+            "source": "controlled_safety_layer",
+            "reply": "📸 **Tamper-Evident Evidence Vault:** Open **Safety → Evidence Camera** or **Evidence Vault** to record photos/videos with cryptographic SHA-256 integrity hashes computed using the browser Web Crypto API."
+        }
+
+    if any(k in prompt_lower for k in ["incident", "report", "harassment", "record", "documentation"]):
+        return {
+            "source": "controlled_safety_layer",
+            "reply": "📝 **Safety Incident Reporting:** Go to **Safety → Incident Reports** to create and export structured personal records of safety concerns, harassment, or stalking with timestamps and evidence attachments."
+        }
+
+    if any(k in prompt_lower for k in ["fake call", "escape", "uncomfortable", "leave"]):
+        return {
+            "source": "controlled_safety_layer",
+            "reply": "📞 **Fake Call & Escape Mode:** Open **Safety → Fake Call** to simulate an incoming ringtone and caller screen with a custom delay, giving you a discreet exit strategy."
         }
 
     # 2. Open-ended Gemini API Layer
     if GEMINI_API_KEY:
         try:
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-            system_instruction = "You are SecureHer AI, a compassionate, supportive wellness assistant for women's safety, mental health, and physical health. Provide concise, clear, and empowering answers. Never give medical diagnoses or claim to replace emergency services."
+            system_instruction = "You are SecureHer AI, an expert, empowering assistant for women's personal safety, security planning, self-defense awareness, and travel security. Provide concise, clear, and actionable safety answers. Never give medical diagnoses or claim to replace emergency authorities."
 
             gemini_payload = {
                 "contents": [
@@ -347,7 +510,7 @@ def secureher_ai_router(req: AIRequest, authorization: Optional[str] = Header(No
     # Fallback response when Gemini key is not set or unavailable
     return {
         "source": "secureher_assistant",
-        "reply": f"I am your SecureHer Safety & Health Assistant. For urgent situations, use **Emergency SOS** or call **112**. For feature guidance, navigate using the sidebar to explore Safety, Health, Community, and Settings."
+        "reply": "I am your **SecureHer AI Security Assistant**. For urgent situations, press **Emergency SOS** or call **112**. Use the Safety menu to access Trusted Journeys, Nearby Emergency Services, Evidence Vault, Incident Reporting, and Fake Call."
     }
 
 if __name__ == "__main__":
@@ -355,3 +518,4 @@ if __name__ == "__main__":
     # Use PORT env var for Cloud Run / Vercel local dev compatibility
     port = int(os.environ.get("PORT", 8000))
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
+

@@ -7,18 +7,18 @@ import {
   Users,
   MapPin,
   PhoneCall,
-  Heart,
-  Calendar,
-  Smile,
-  Pill,
-  Stethoscope,
   MessageSquare,
   Bell,
   User,
   Settings,
   LogOut,
   ChevronRight,
-  Camera
+  Camera,
+  Navigation,
+  Building,
+  Lock,
+  FileText,
+  PhoneForwarded
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -34,28 +34,23 @@ const Sidebar = ({ mobileOpen, setMobileOpen }) => {
       ]
     },
     {
-      title: 'Safety',
+      title: 'Safety & Protection',
       items: [
-        { label: 'Safety & SOS', path: '/safety', icon: Shield, exact: true },
-        { label: 'Emergency Contacts', path: '/safety/contacts', icon: Users },
-        { label: 'Live Location', path: '/safety/location', icon: MapPin },
+        { label: 'Safety Overview', path: '/safety', icon: Shield, exact: true },
+        { label: 'Emergency SOS', path: '/safety/sos', icon: AlertTriangle },
+        { label: 'Trusted Journey', path: '/safety/journey', icon: Navigation },
+        { label: 'Nearby Services', path: '/safety/nearby', icon: Building },
+        { label: 'Evidence Vault', path: '/safety/evidence-history', icon: Lock },
         { label: 'Evidence Camera', path: '/safety/evidence', icon: Camera },
+        { label: 'Incident Reports', path: '/safety/incidents', icon: FileText },
+        { label: 'Fake Call & Escape', path: '/safety/fake-call', icon: PhoneForwarded },
+        { label: 'Emergency Contacts', path: '/safety/contacts', icon: Users },
+        { label: 'Live Location & Map', path: '/safety/location', icon: MapPin },
         { label: 'Helplines', path: '/safety/helplines', icon: PhoneCall }
       ]
     },
     {
-      title: 'Health',
-      items: [
-        { label: 'Health Tracker', path: '/health', icon: Heart, exact: true },
-        { label: 'Period Tracker', path: '/health/period', icon: Calendar },
-        { label: 'Health Calendar', path: '/health/calendar', icon: Calendar },
-        { label: 'Mood Journal', path: '/health/mood', icon: Smile },
-        { label: 'Medications', path: '/health/medication', icon: Pill },
-        { label: 'Appointments', path: '/health/appointments', icon: Stethoscope }
-      ]
-    },
-    {
-      title: 'Support',
+      title: 'Network & Support',
       items: [
         { label: 'Community', path: '/community', icon: MessageSquare },
         { label: 'Notifications', path: '/notifications', icon: Bell }

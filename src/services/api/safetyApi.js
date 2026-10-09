@@ -97,3 +97,66 @@ export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recip
     };
   }
 };
+
+export const shareJourneyProgress = async ({
+  token,
+  journeyTitle,
+  destinationLabel,
+  status = 'active',
+  latitude,
+  longitude,
+  expectedArrivalAt,
+  recipientEmail,
+  recipientName,
+  userName,
+  notes
+}) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const payload = {
+      journeyTitle,
+      destinationLabel: destinationLabel || '',
+      status,
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      expectedArrivalAt: expectedArrivalAt || null,
+      recipientEmail,
+      recipientName: recipientName || null,
+      userName: userName || 'SecureHer User',
+      notes: notes || null
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/journey/share`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const result = await response.json().catch(() => ({}));
+    if (response.ok && result.success) {
+      return { success: true, message: result.message || 'Journey progress shared.' };
+    }
+    return {
+      success: false,
+      message: result.detail || result.message || 'Could not send journey email update.'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      message: err.message || 'Network error while contacting journey sharing service.'
+    };
+  }
+};
+

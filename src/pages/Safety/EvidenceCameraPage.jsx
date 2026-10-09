@@ -5,6 +5,7 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import { useSafety } from '../../context/SafetyContext';
 import { requestCameraStream, requestMicrophoneStream } from '../../services/permissionService';
+import { computeSHA256FromDataUrl } from '../../utils/cryptoUtils';
 
 const EvidenceCameraPage = () => {
   const { currentLocation, refreshPermissions } = useSafety();
@@ -74,7 +75,7 @@ const EvidenceCameraPage = () => {
     setIsRecording(false);
   };
 
-  const capturePhoto = () => {
+  const capturePhoto = async () => {
     if (!videoRef.current || !cameraActive) return;
 
     const video = videoRef.current;
@@ -86,19 +87,29 @@ const EvidenceCameraPage = () => {
 
     const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
 
-    const evidenceItem = {
-      id: 'ev_' + Date.now(),
-      type: 'photo',
-      data: dataUrl,
-      timestamp: new Date().toISOString(),
-      formattedTime: new Date().toLocaleString(),
-      latitude: currentLocation?.latitude ?? null,
-      longitude: currentLocation?.longitude ?? null,
-      note: 'Snapshot captured during safety event'
-    };
+    try {
+      const { hashHex, byteSize } = await computeSHA256FromDataUrl(dataUrl);
 
-    saveEvidenceLocally(evidenceItem);
-    setLastCaptured(evidenceItem);
+      const evidenceItem = {
+        id: 'ev_' + Date.now(),
+        type: 'photo',
+        mimeType: 'image/jpeg',
+        data: dataUrl,
+        byteSize,
+        sha256Hash: hashHex,
+        timestamp: new Date().toISOString(),
+        formattedTime: new Date().toLocaleString(),
+        latitude: currentLocation?.latitude ?? null,
+        longitude: currentLocation?.longitude ?? null,
+        accuracy: currentLocation?.accuracy ?? null,
+        note: 'Snapshot captured during safety event'
+      };
+
+      saveEvidenceLocally(evidenceItem);
+      setLastCaptured(evidenceItem);
+    } catch (err) {
+      console.error('Error hashing photo evidence:', err);
+    }
   };
 
   const startRecording = async () => {
@@ -126,19 +137,30 @@ const EvidenceCameraPage = () => {
       recorder.onstop = () => {
         const blob = new Blob(chunks, { type: 'video/webm' });
         const reader = new FileReader();
-        reader.onloadend = () => {
-          const evidenceItem = {
-            id: 'ev_' + Date.now(),
-            type: 'video',
-            data: reader.result,
-            timestamp: new Date().toISOString(),
-            formattedTime: new Date().toLocaleString(),
-            latitude: currentLocation?.latitude ?? null,
-            longitude: currentLocation?.longitude ?? null,
-            note: 'Video incident recording'
-          };
-          saveEvidenceLocally(evidenceItem);
-          setLastCaptured(evidenceItem);
+        reader.onloadend = async () => {
+          const dataUrl = reader.result;
+          try {
+            const { hashHex, byteSize } = await computeSHA256FromDataUrl(dataUrl);
+
+            const evidenceItem = {
+              id: 'ev_' + Date.now(),
+              type: 'video',
+              mimeType: 'video/webm',
+              data: dataUrl,
+              byteSize,
+              sha256Hash: hashHex,
+              timestamp: new Date().toISOString(),
+              formattedTime: new Date().toLocaleString(),
+              latitude: currentLocation?.latitude ?? null,
+              longitude: currentLocation?.longitude ?? null,
+              accuracy: currentLocation?.accuracy ?? null,
+              note: 'Video incident recording'
+            };
+            saveEvidenceLocally(evidenceItem);
+            setLastCaptured(evidenceItem);
+          } catch (err) {
+            console.error('Error hashing video evidence:', err);
+          }
         };
         reader.readAsDataURL(blob);
       };
@@ -161,7 +183,7 @@ const EvidenceCameraPage = () => {
   const saveEvidenceLocally = (item) => {
     try {
       const existing = JSON.parse(localStorage.getItem('secureher_evidence_vault') || '[]');
-      const updated = [item, ...existing].slice(0, 15);
+      const updated = [item, ...existing].slice(0, 25);
       localStorage.setItem('secureher_evidence_vault', JSON.stringify(updated));
     } catch (e) {
       console.warn('LocalStorage save warning:', e);

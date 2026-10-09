@@ -399,3 +399,150 @@ export const markNotificationAsRead = async (uid, notifId) => {
     readAt: serverTimestamp()
   });
 };
+
+// ----------------------------------------------------------------------
+// 9. TRUSTED JOURNEYS (users/{uid}/journeys)
+// ----------------------------------------------------------------------
+
+export const subscribeJourneys = (uid, onUpdate, onError) => {
+  if (!uid) return () => {};
+  const journeysRef = collection(db, 'users', uid, 'journeys');
+  const q = query(journeysRef, orderBy('createdAt', 'desc'), limit(30));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const journeys = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
+      onUpdate(journeys);
+    },
+    (err) => {
+      console.error('Error fetching journeys:', err);
+      if (onError) onError(err);
+    }
+  );
+};
+
+export const createJourney = async (uid, journeyData) => {
+  if (!uid) throw new Error('User not authenticated');
+  const journeysRef = collection(db, 'users', uid, 'journeys');
+  const docRef = await addDoc(journeysRef, {
+    ownerUid: uid,
+    title: journeyData.title || 'Untitled Journey',
+    destinationLabel: journeyData.destinationLabel || '',
+    destinationLatitude: journeyData.destinationLatitude ?? null,
+    destinationLongitude: journeyData.destinationLongitude ?? null,
+    startLabel: journeyData.startLabel || 'Current Location',
+    startLatitude: journeyData.startLatitude ?? null,
+    startLongitude: journeyData.startLongitude ?? null,
+    startedAt: journeyData.startedAt || new Date().toISOString(),
+    expectedArrivalAt: journeyData.expectedArrivalAt || null,
+    lastLatitude: journeyData.lastLatitude ?? journeyData.startLatitude ?? null,
+    lastLongitude: journeyData.lastLongitude ?? journeyData.startLongitude ?? null,
+    lastLocationAt: new Date().toISOString(),
+    locationAccuracyMeters: journeyData.locationAccuracyMeters ?? null,
+    status: journeyData.status || 'active', // 'planned' | 'active' | 'paused' | 'completed' | 'cancelled'
+    selectedContactIds: journeyData.selectedContactIds || [],
+    notes: journeyData.notes || '',
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return docRef.id;
+};
+
+export const updateJourneyLocation = async (uid, journeyId, locationData) => {
+  if (!uid || !journeyId) return;
+  const journeyRef = doc(db, 'users', uid, 'journeys', journeyId);
+  await updateDoc(journeyRef, {
+    lastLatitude: locationData.latitude,
+    lastLongitude: locationData.longitude,
+    locationAccuracyMeters: locationData.accuracy ?? null,
+    lastLocationAt: new Date().toISOString(),
+    updatedAt: serverTimestamp()
+  });
+};
+
+export const updateJourneyStatus = async (uid, journeyId, status, extraData = {}) => {
+  if (!uid || !journeyId) return;
+  const journeyRef = doc(db, 'users', uid, 'journeys', journeyId);
+  const updatePayload = {
+    status,
+    updatedAt: serverTimestamp(),
+    ...extraData
+  };
+  if (status === 'completed') {
+    updatePayload.completedAt = new Date().toISOString();
+  }
+  await updateDoc(journeyRef, updatePayload);
+};
+
+export const deleteJourney = async (uid, journeyId) => {
+  if (!uid || !journeyId) return;
+  const journeyRef = doc(db, 'users', uid, 'journeys', journeyId);
+  await deleteDoc(journeyRef);
+};
+
+// ----------------------------------------------------------------------
+// 10. SAFETY INCIDENT REPORTS (users/{uid}/incidentReports)
+// ----------------------------------------------------------------------
+
+export const subscribeIncidentReports = (uid, onUpdate, onError) => {
+  if (!uid) return () => {};
+  const reportsRef = collection(db, 'users', uid, 'incidentReports');
+  const q = query(reportsRef, orderBy('createdAt', 'desc'), limit(50));
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const reports = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data()
+      }));
+      onUpdate(reports);
+    },
+    (err) => {
+      console.error('Error fetching incident reports:', err);
+      if (onError) onError(err);
+    }
+  );
+};
+
+export const createIncidentReport = async (uid, reportData) => {
+  if (!uid) throw new Error('User not authenticated');
+  const reportsRef = collection(db, 'users', uid, 'incidentReports');
+  const docRef = await addDoc(reportsRef, {
+    ownerUid: uid,
+    incidentType: reportData.incidentType || 'Other safety concern',
+    title: reportData.title || `${reportData.incidentType || 'Safety'} Report`,
+    incidentAt: reportData.incidentAt || new Date().toISOString(),
+    locationLabel: reportData.locationLabel || '',
+    latitude: reportData.latitude ?? null,
+    longitude: reportData.longitude ?? null,
+    locationAccuracyMeters: reportData.locationAccuracyMeters ?? null,
+    description: reportData.description || '',
+    notes: reportData.notes || '',
+    evidenceIds: reportData.evidenceIds || [],
+    status: reportData.status || 'saved', // 'draft' | 'saved' | 'archived'
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp()
+  });
+  return docRef.id;
+};
+
+export const updateIncidentReport = async (uid, reportId, updateData) => {
+  if (!uid || !reportId) return;
+  const reportRef = doc(db, 'users', uid, 'incidentReports', reportId);
+  await updateDoc(reportRef, {
+    ...updateData,
+    updatedAt: serverTimestamp()
+  });
+};
+
+export const deleteIncidentReport = async (uid, reportId) => {
+  if (!uid || !reportId) return;
+  const reportRef = doc(db, 'users', uid, 'incidentReports', reportId);
+  await deleteDoc(reportRef);
+};
+

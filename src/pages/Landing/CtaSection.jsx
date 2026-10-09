@@ -56,7 +56,7 @@ const CtaSection = () => {
             letterSpacing: '-0.02em'
           }}
         >
-          Take control of your safety and wellbeing.
+          Take control of your personal security.
         </h2>
 
         <p
@@ -68,7 +68,7 @@ const CtaSection = () => {
             marginBottom: '2.5rem'
           }}
         >
-          Experience 24/7 instant emergency protection, intelligent cycle tracking, and a compassionate women community.
+          Experience 24/7 instant emergency protection, live trusted journey tracking, tamper-evident evidence verification, and an active peer safety community.
         </p>
 
         <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '1.25rem' }}>

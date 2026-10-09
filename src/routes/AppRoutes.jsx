@@ -12,16 +12,13 @@ import SafetyPage from '../pages/Safety/SafetyPage';
 import SOSPage from '../pages/Safety/SOSPage';
 import EmergencyContactsPage from '../pages/Safety/EmergencyContactsPage';
 import LocationPage from '../pages/Safety/LocationPage';
-import HelplinesPage from '../pages/Safety/HelplinesPage';
+import JourneyPage from '../pages/Safety/JourneyPage';
+import NearbyServicesPage from '../pages/Safety/NearbyServicesPage';
 import EvidenceCameraPage from '../pages/Safety/EvidenceCameraPage';
 import EvidenceHistoryPage from '../pages/Safety/EvidenceHistoryPage';
-
-import HealthPage from '../pages/Health/HealthPage';
-import PeriodTrackerPage from '../pages/Health/PeriodTrackerPage';
-import HealthCalendarPage from '../pages/Health/HealthCalendarPage';
-import MoodPage from '../pages/Health/MoodPage';
-import MedicationPage from '../pages/Health/MedicationPage';
-import AppointmentsPage from '../pages/Health/AppointmentsPage';
+import IncidentReportsPage from '../pages/Safety/IncidentReportsPage';
+import FakeCallPage from '../pages/Safety/FakeCallPage';
+import HelplinesPage from '../pages/Safety/HelplinesPage';
 
 import CommunityPage from '../pages/Community/CommunityPage';
 import NotificationsPage from '../pages/Notifications/NotificationsPage';
@@ -68,7 +65,7 @@ const AppRoutes = () => {
         }
       />
 
-      {/* Safety Routes */}
+      {/* Security Routes */}
       <Route
         path="/safety"
         element={
@@ -110,6 +107,26 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/safety/journey"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <JourneyPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/safety/nearby"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <NearbyServicesPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/safety/evidence"
         element={
           <ProtectedRoute>
@@ -130,73 +147,31 @@ const AppRoutes = () => {
         }
       />
       <Route
+        path="/safety/incidents"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <IncidentReportsPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/safety/fake-call"
+        element={
+          <ProtectedRoute>
+            <AppLayout>
+              <FakeCallPage />
+            </AppLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/safety/helplines"
         element={
           <ProtectedRoute>
             <AppLayout>
               <HelplinesPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* Health Routes */}
-      <Route
-        path="/health"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <HealthPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/health/period"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <PeriodTrackerPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/health/calendar"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <HealthCalendarPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/health/mood"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <MoodPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/health/medication"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <MedicationPage />
-            </AppLayout>
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/health/appointments"
-        element={
-          <ProtectedRoute>
-            <AppLayout>
-              <AppointmentsPage />
             </AppLayout>
           </ProtectedRoute>
         }

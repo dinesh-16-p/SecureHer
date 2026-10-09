@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, Shield, Heart, Users, Bell, ArrowRight, CheckCircle } from 'lucide-react';
+import { User, Shield, Navigation, Bell, CheckCircle } from 'lucide-react';
 import SectionHeading from '../../components/common/SectionHeading';
 import Card from '../../components/common/Card';
 
@@ -8,30 +8,30 @@ const HowItWorksSection = () => {
     {
       num: '01',
       icon: User,
-      title: 'User Registration',
-      subtitle: 'Create your private account & set emergency contacts',
-      desc: 'Sign up securely, add trusted emergency contacts with priority levels, and grant location permissions for emergency response.'
+      title: 'User Setup & Circle',
+      subtitle: 'Create account & set emergency contacts',
+      desc: 'Sign up securely, add trusted emergency contacts with priority levels, and configure location access for emergency dispatches.'
     },
     {
       num: '02',
-      icon: Shield,
-      title: 'SecureHer Core Engine',
-      subtitle: 'Active protection & health analytics',
-      desc: 'The intelligent engine continuously monitors location sharing during emergencies and tracks health patterns privately.'
+      icon: Navigation,
+      title: 'Trusted Journey Tracking',
+      subtitle: 'Plan safe routes & live check-ins',
+      desc: 'Share live progress with trusted contacts, track arrival estimations, and dispatch safe arrival status with 1-tap.'
     },
     {
       num: '03',
-      icon: Heart,
-      title: 'Safety, Health & Community',
-      subtitle: 'Comprehensive feature hub',
-      desc: 'Access 1-tap SOS, cycle tracking, mood logs, medication reminders, doctor appointments, and peer support discussions.'
+      icon: Shield,
+      title: 'Tamper-Evident Vault',
+      subtitle: 'Cryptographic SHA-256 integrity',
+      desc: 'Record photos and videos sealed with browser Web Crypto SHA-256 hashes and document safety incidents privately.'
     },
     {
       num: '04',
       icon: Bell,
-      title: 'Notifications & Instant Support',
-      subtitle: 'Proactive alerts & response',
-      desc: 'Receive period estimates, medication reminders, and immediate SOS broadcast alerts sent directly to your contacts.'
+      title: 'Instant SOS & Response',
+      subtitle: 'Verified Brevo email dispatches',
+      desc: 'Activate Emergency SOS with a 3-second hold to dispatch live GPS coordinates and access verified nearby police/hospitals.'
     }
   ];
 
@@ -47,11 +47,11 @@ const HowItWorksSection = () => {
     >
       <div className="container">
         <SectionHeading
-          badgeText="Simple & Scalable Workflow"
+          badgeText="Simple & Reliable Workflow"
           badgeIcon={CheckCircle}
           badgeVariant="primary"
           title="How SecureHer Operates"
-          subtitle="Four structured stages connecting the user to physical safety, wellness analytics, and community emergency dispatch."
+          subtitle="Four structured stages connecting the user to physical safety, travel tracking, and emergency alert dispatch."
         />
 
         {/* Workflow Steps Grid */}

@@ -16,6 +16,6 @@ export const COLORS = {
 
 export const BRAND = {
   name: 'SecureHer',
-  tagline: 'Your Safety. Your Health. Your Community.',
-  description: 'One intelligent platform designed to help women stay safer, healthier, and connected.'
+  tagline: 'AI-Based Women’s Security Application',
+  description: 'Intelligent security platform providing trusted journey tracking, emergency SOS, tamper-evident evidence vault, nearby services, and discreet escape tools.'
 };

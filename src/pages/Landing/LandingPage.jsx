@@ -3,7 +3,6 @@ import Navbar from '../../components/navigation/Navbar';
 import HeroSection from './HeroSection';
 import WhySection from './WhySection';
 import SafetySection from './SafetySection';
-import HealthSection from './HealthSection';
 import CommunitySection from './CommunitySection';
 import HowItWorksSection from './HowItWorksSection';
 import CtaSection from './CtaSection';
@@ -17,7 +16,6 @@ const LandingPage = () => {
         <HeroSection />
         <WhySection />
         <SafetySection />
-        <HealthSection />
         <CommunitySection />
         <HowItWorksSection />
         <CtaSection />

@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Shield, Heart, Users, User, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, Shield, Navigation, Users, User, AlertTriangle } from 'lucide-react';
 
 const MobileBottomNav = () => {
   const location = useLocation();
@@ -9,7 +9,7 @@ const MobileBottomNav = () => {
     { label: 'Home', path: '/dashboard', icon: LayoutDashboard },
     { label: 'Safety', path: '/safety', icon: Shield },
     { label: 'SOS', path: '/safety/sos', icon: AlertTriangle, isSos: true },
-    { label: 'Health', path: '/health', icon: Heart },
+    { label: 'Journey', path: '/safety/journey', icon: Navigation },
     { label: 'Community', path: '/community', icon: Users },
     { label: 'Profile', path: '/profile', icon: User }
   ];

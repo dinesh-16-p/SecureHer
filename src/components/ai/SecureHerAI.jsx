@@ -1,15 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, MessageSquare, X, Send, Shield, Heart, Bot } from 'lucide-react';
+import { Sparkles, MessageSquare, X, Send, Shield, Bot } from 'lucide-react';
 import { queryAI } from '../../services/ai/aiService';
-import { useHealth } from '../../context/HealthContext';
 
 const SecureHerAI = () => {
-  const { cycleSummary } = useHealth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([
     {
       sender: 'bot',
-      text: 'Hello! I am your **SecureHer Assistant**. Ask me anything about safety procedures, cycle tracking, or emergency guidance.'
+      text: 'Hello! I am your **SecureHer AI Security Assistant**. Ask me anything about safety procedures, trusted journey tracking, evidence verification, or emergency response.'
     }
   ]);
   const [input, setInput] = useState('');
@@ -36,10 +34,7 @@ const SecureHerAI = () => {
     setLoading(true);
 
     try {
-      const res = await queryAI(queryText, {
-        currentDay: cycleSummary?.currentDay,
-        phase: cycleSummary?.phase
-      });
+      const res = await queryAI(queryText, {});
       setMessages((prev) => [...prev, { sender: 'bot', text: res.reply }]);
     } catch (err) {
       setMessages((prev) => [
@@ -53,9 +48,9 @@ const SecureHerAI = () => {
 
   const quickPrompts = [
     'How do I use Emergency SOS?',
-    'Explain my current cycle phase',
-    'How is evidence stored locally?',
-    'What helplines can I call?'
+    'How do I track a Trusted Journey?',
+    'How does the Evidence Vault hash work?',
+    'What verified helplines can I call?'
   ];
 
   return (
@@ -133,7 +128,7 @@ const SecureHerAI = () => {
               </div>
               <div>
                 <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>SecureHer AI</div>
-                <div style={{ fontSize: '0.725rem', opacity: 0.8 }}>Safety & Wellness Guide</div>
+                <div style={{ fontSize: '0.725rem', opacity: 0.8 }}>Security & Safety Assistant</div>
               </div>
             </div>
             <button

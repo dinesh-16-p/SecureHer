@@ -1,6 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, PhoneCall, MapPin, Users, AlertTriangle, Cpu, Radio, ChevronRight } from 'lucide-react';
+import {
+  Shield,
+  PhoneCall,
+  MapPin,
+  Users,
+  AlertTriangle,
+  Lock,
+  Navigation,
+  Building,
+  FileText,
+  PhoneForwarded,
+  ChevronRight
+} from 'lucide-react';
 import SectionHeading from '../../components/common/SectionHeading';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -13,48 +25,48 @@ const SafetySection = () => {
       badge: 'High Priority',
       badgeVariant: 'emergency',
       title: 'Emergency SOS Broadcast',
-      description: 'One-press 3-second hold triggers continuous live GPS tracking, alerts your primary emergency contacts, and logs evidence snapshot.',
-      features: ['2-3s hold prevention', 'Live location link via SMS', 'Automatic emergency log']
+      description: 'One-press 3-second hold triggers continuous live GPS tracking, sounds emergency alarm, and dispatches verified email alerts to your trusted contacts via Brevo.',
+      features: ['3-second hold prevention', 'Live Google Maps link', 'Verified Brevo transactional emails']
     },
     {
-      icon: Users,
-      badge: 'Contacts',
-      badgeVariant: 'secondary',
-      title: 'Trusted Emergency Circle',
-      description: 'Manage up to 5 prioritized emergency contacts who get instant push notifications and SMS alerts whenever you activate SOS.',
-      features: ['Priority ordering (1st, 2nd, 3rd)', 'Instant SMS & push notifications', 'One-tap direct phone call']
-    },
-    {
-      icon: MapPin,
-      badge: 'Real-Time GPS',
+      icon: Navigation,
+      badge: 'Travel Safety',
       badgeVariant: 'primary',
-      title: 'Live Location & Geofencing',
-      description: 'Share your trip live with family or set safe route boundaries. Receive proactive alerts if you stray off course.',
-      features: ['Precision GPS updates', 'Shareable web link', 'Safe arrival confirmation']
+      title: 'Trusted Journey Tracking',
+      description: 'Plan safe routes, set estimated arrival times, and send real-time check-in updates to your trusted circle with continuous GPS position monitoring.',
+      features: ['Estimated arrival monitoring', 'Authenticated contact email updates', 'Clean start-to-finish lifecycle']
     },
     {
-      icon: PhoneCall,
-      badge: 'Helplines',
-      badgeVariant: 'accent',
-      title: 'Verified Emergency Helplines',
-      description: 'Instant one-tap direct calling to National Emergency (112), Women Helpline (1091), Police, Ambulance, and Legal Aid.',
-      features: ['Pre-configured regional numbers', 'No dialing needed', '24/7 availability']
-    },
-    {
-      icon: Cpu,
-      badge: 'AI Detection',
-      badgeVariant: 'health',
-      title: 'AI Danger & Anomaly Guard',
-      description: 'Built-in intelligent safety module prepared for real-time risk assessment, anomaly detection, and automated evidence capturing.',
-      features: ['Acoustic danger detection architecture', 'Automated photo capture ready', 'Smart risk score']
-    },
-    {
-      icon: Radio,
-      badge: 'Evidence',
+      icon: Building,
+      badge: 'Geographic Search',
       badgeVariant: 'secondary',
-      title: 'Cloud Evidence Vault',
-      description: 'Securely records photo and audio snippets during emergency mode and uploads them directly to encrypted cloud storage.',
-      features: ['Secure audio/photo capture', 'Encrypted Firebase storage', 'Tamper-proof log']
+      title: 'Nearby Emergency Services',
+      description: 'Discover verified police stations, emergency hospitals, and fire departments around your location using real OpenStreetMap geographic data.',
+      features: ['Haversine distance calculation', '1-tap direct phone dialing', 'Google Maps turn-by-turn directions']
+    },
+    {
+      icon: Lock,
+      badge: 'Tamper-Evident',
+      badgeVariant: 'primary',
+      title: 'Tamper-Evident Evidence Vault',
+      description: 'Record incident photos and videos stored locally with cryptographic SHA-256 integrity hashes computed using the browser Web Crypto API.',
+      features: ['Web Crypto SHA-256 digest', 'Re-verify file integrity anytime', 'Cryptographic JSON manifest export']
+    },
+    {
+      icon: FileText,
+      badge: 'Documentation',
+      badgeVariant: 'secondary',
+      title: 'Safety Incident Reporting',
+      description: 'Maintain private, structured documentation of harassment, stalking, or travel incidents with timestamps, notes, and evidence attachments.',
+      features: ['Categorized structured fields', 'Optional 1-tap GPS capture', 'Exportable JSON incident summaries']
+    },
+    {
+      icon: PhoneForwarded,
+      badge: 'Discreet Exit',
+      badgeVariant: 'health',
+      title: 'Fake Call & Escape Mode',
+      description: 'Simulate realistic incoming phone calls with synthesized ringtones and timer delays to discreetly exit awkward or uncomfortable situations.',
+      features: ['Custom caller names & presets', 'Configurable delay countdown', 'Quick escape shortcuts']
     }
   ];
 
@@ -69,11 +81,11 @@ const SafetySection = () => {
     >
       <div className="container">
         <SectionHeading
-          badgeText="Safety First"
+          badgeText="Safety Core"
           badgeIcon={Shield}
           badgeVariant="emergency"
-          title="Instant Emergency SOS & AI Safety Shield"
-          subtitle="Empowering women with immediate response tools, real-time tracking, and automated emergency alert systems."
+          title="Intelligent Women’s Security Platform"
+          subtitle="Comprehensive protection architecture: instant emergency response, trusted journey tracking, cryptographic evidence, and discreet escape tools."
         />
 
         {/* SOS Interactive Demonstration Banner */}
@@ -106,7 +118,7 @@ const SafetySection = () => {
                 Designed to prevent accidental triggers while guaranteeing rapid activation when seconds count. In emergency mode, your exact GPS coordinates are dispatched instantly to your contacts.
               </p>
               <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                <Link to="/signup">
+                <Link to="/signup" style={{ textDecoration: 'none' }}>
                   <Button variant="emergency" size="md" icon={Shield}>
                     Setup Emergency Contacts
                   </Button>

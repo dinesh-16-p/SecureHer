@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Shield, Heart, Users, Sparkles, ArrowRight, Activity, Lock, PhoneCall } from 'lucide-react';
+import { Shield, Sparkles, ArrowRight, Lock, PhoneCall, Navigation, Building } from 'lucide-react';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 
@@ -54,8 +54,8 @@ const HeroSection = () => {
         >
           {/* Left Text Column */}
           <div style={{ gridColumn: 'span 12 / span 12' }} className="hero-text-col">
-            <Badge variant="secondary" icon={Sparkles} className="animate-pulse-glow">
-              Next-Gen AI Women Safety & Health Platform
+            <Badge variant="secondary" icon={Shield} className="animate-pulse-glow">
+              SecureHer — AI-Based Women’s Security Application
             </Badge>
 
             <h1
@@ -70,8 +70,8 @@ const HeroSection = () => {
               }}
             >
               Your Safety. <br />
-              <span className="gradient-text">Your Health.</span> <br />
-              <span style={{ color: 'var(--color-secondary)' }}>Your Community.</span>
+              <span className="gradient-text">Your Protection.</span> <br />
+              <span style={{ color: 'var(--color-secondary)' }}>Your Trusted Network.</span>
             </h1>
 
             <p
@@ -83,7 +83,7 @@ const HeroSection = () => {
                 marginBottom: '2.5rem'
               }}
             >
-              One intelligent platform designed to help women stay safer, healthier, and connected with 24/7 emergency response, AI danger detection, and personalized cycle tracking.
+              One dedicated women's security platform with 24/7 Emergency SOS dispatch, live Trusted Journey Tracking, Tamper-Evident Evidence Vault, Nearby Services discovery, and discreet Escape Mode.
             </p>
 
             <div
@@ -94,14 +94,14 @@ const HeroSection = () => {
                 alignItems: 'center'
               }}
             >
-              <Link to="/signup">
+              <Link to="/signup" style={{ textDecoration: 'none' }}>
                 <Button variant="primary" size="lg" icon={ArrowRight} iconPosition="right">
                   Get Started
                 </Button>
               </Link>
-              <a href="#features">
-                <Button variant="outline" size="lg" icon={Sparkles}>
-                  Explore Features
+              <a href="#safety" style={{ textDecoration: 'none' }}>
+                <Button variant="outline" size="lg" icon={Shield}>
+                  Explore Security Modules
                 </Button>
               </a>
             </div>
@@ -121,23 +121,23 @@ const HeroSection = () => {
                   1-Tap
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                  Instant Emergency SOS
+                  Emergency SOS
                 </p>
               </div>
               <div>
                 <h4 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-secondary)', lineHeight: 1 }}>
-                  100%
+                  SHA-256
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                  Encrypted & Private
+                  Tamper-Evident Vault
                 </p>
               </div>
               <div>
                 <h4 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--color-health)', lineHeight: 1 }}>
-                  AI-Powered
+                  Live GPS
                 </h4>
                 <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginTop: '0.25rem' }}>
-                  Safety & Cycle Support
+                  Trusted Journey Tracking
                 </p>
               </div>
             </div>
@@ -180,14 +180,14 @@ const HeroSection = () => {
                   <Shield size={36} />
                 </div>
                 <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem', color: 'var(--color-primary)' }}>
-                  SecureHer Ecosystem
+                  SecureHer Security Core
                 </h3>
                 <p style={{ fontSize: '0.925rem', color: 'var(--color-text-muted)', marginBottom: '1.75rem' }}>
-                  Intelligent threat detection, emergency alert broadcasting, and holistic healthcare monitoring in one seamless app.
+                  Real-time journey tracking, tamper-evident cryptographic evidence, and instant emergency dispatch.
                 </p>
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-                  <Badge variant="primary" icon={Lock}>256-Bit Protection</Badge>
-                  <Badge variant="health" icon={Activity}>Cycle Sync</Badge>
+                  <Badge variant="primary" icon={Lock}>Web Crypto SHA-256</Badge>
+                  <Badge variant="secondary" icon={Navigation}>Live Journey</Badge>
                 </div>
               </div>
 
@@ -226,7 +226,7 @@ const HeroSection = () => {
                 </div>
               </div>
 
-              {/* Floating Pill 2: Health Monitor */}
+              {/* Floating Pill 2: Nearby Services */}
               <div
                 className="glass-card"
                 style={{
@@ -237,7 +237,7 @@ const HeroSection = () => {
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.75rem',
-                  borderLeft: '4px solid var(--color-health)'
+                  borderLeft: '4px solid var(--color-primary)'
                 }}
               >
                 <div
@@ -245,18 +245,18 @@ const HeroSection = () => {
                     width: '2.25rem',
                     height: '2.25rem',
                     borderRadius: '50%',
-                    backgroundColor: 'rgba(155, 107, 143, 0.15)',
+                    backgroundColor: 'rgba(91, 33, 79, 0.12)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: 'var(--color-health)'
+                    color: 'var(--color-primary)'
                   }}
                 >
-                  <Heart size={18} />
+                  <Building size={18} />
                 </div>
                 <div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Cycle Status</div>
-                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-primary)' }}>Follicular Phase (Day 9)</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>Nearby Services</div>
+                  <div style={{ fontSize: '0.875rem', fontWeight: 700, color: 'var(--color-primary)' }}>Police & Hospital GPS</div>
                 </div>
               </div>
             </div>
