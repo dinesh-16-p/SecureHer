@@ -125,3 +125,159 @@ button, input, select, textarea {
   outline: 3px solid var(--color-secondary);
   outline-offset: 2px;
 }
+
+/* SecureHer AI Chat Markdown Formatting */
+.secureher-chat-markdown {
+  font-size: 0.875rem;
+  line-height: 1.55;
+  color: var(--color-text);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.secureher-chat-markdown h1 {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--color-primary);
+  margin: 0.5rem 0 0.3rem 0;
+  line-height: 1.3;
+}
+
+.secureher-chat-markdown h2 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0.45rem 0 0.25rem 0;
+  line-height: 1.3;
+}
+
+.secureher-chat-markdown h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0.35rem 0 0.2rem 0;
+  line-height: 1.3;
+}
+
+.secureher-chat-markdown p {
+  margin: 0 0 0.45rem 0;
+  line-height: 1.55;
+}
+
+.secureher-chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.secureher-chat-markdown strong {
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.secureher-chat-markdown em {
+  font-style: italic;
+}
+
+.secureher-chat-markdown ul {
+  list-style-type: disc;
+  margin: 0.25rem 0 0.45rem 1.25rem;
+  padding: 0;
+}
+
+.secureher-chat-markdown ol {
+  list-style-type: decimal;
+  margin: 0.25rem 0 0.45rem 1.25rem;
+  padding: 0;
+}
+
+.secureher-chat-markdown li {
+  margin: 0.15rem 0;
+  line-height: 1.5;
+}
+
+.secureher-chat-markdown li > p {
+  margin: 0;
+  display: inline;
+}
+
+.secureher-chat-markdown blockquote {
+  border-left: 3px solid var(--color-secondary);
+  background: rgba(246, 221, 229, 0.25);
+  padding: 0.35rem 0.65rem;
+  margin: 0.45rem 0;
+  border-radius: 0 6px 6px 0;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.secureher-chat-markdown .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  border-radius: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.secureher-chat-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+  border: 1px solid rgba(199, 91, 122, 0.25);
+  background: #FFFFFF;
+}
+
+.secureher-chat-markdown th {
+  background-color: rgba(244, 217, 231, 0.65);
+  color: var(--color-primary);
+  font-weight: 700;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid rgba(199, 91, 122, 0.25);
+  text-align: left;
+}
+
+.secureher-chat-markdown td {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid rgba(199, 91, 122, 0.2);
+}
+
+.secureher-chat-markdown code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.82rem;
+}
+
+.secureher-chat-markdown code.inline-code {
+  background-color: rgba(91, 33, 79, 0.08);
+  color: var(--color-primary);
+  padding: 0.12rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.secureher-chat-markdown pre {
+  background-color: #261623;
+  color: #FEEBF3;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.45rem 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.secureher-chat-markdown pre code {
+  background-color: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+.secureher-chat-markdown a {
+  color: var(--color-secondary);
+  text-decoration: underline;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secureher-chat-markdown a:hover {
+  color: var(--color-primary);
+}
+

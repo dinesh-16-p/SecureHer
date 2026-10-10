@@ -172,6 +172,45 @@ const SettingsPage = () => {
           )}
         </Card>
 
+        {/* PWA & Offline Security Card */}
+        <Card padding="lg">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+            <Shield size={20} color="var(--color-primary)" />
+            <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-primary)', margin: 0 }}>
+              Progressive Web App (PWA) & Offline Security
+            </h3>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem', lineHeight: '1.5' }}>
+            <div style={{ padding: '0.75rem', backgroundColor: '#FFF9FB', borderRadius: '8px', border: '1px solid rgba(246, 221, 229, 0.8)' }}>
+              <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.2rem' }}>
+                Offline Fallback & Helplines
+              </div>
+              <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.825rem' }}>
+                When internet access is lost, SecureHer continues to run the core application shell and displays emergency telephone helplines (112, 1091, 100) that connect directly through cellular telephone carriers without internet.
+              </p>
+            </div>
+
+            <div style={{ padding: '0.75rem', backgroundColor: '#FFF9FB', borderRadius: '8px', border: '1px solid rgba(246, 221, 229, 0.8)' }}>
+              <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.2rem' }}>
+                Privacy & Cache Security Isolation
+              </div>
+              <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.825rem' }}>
+                The service worker explicitly excludes authenticated API routes, Firestore documents, evidence media, and access tokens from browser storage caches. Your private incidents and account information are never retained in shared cache partitions.
+              </p>
+            </div>
+
+            <div style={{ padding: '0.75rem', backgroundColor: '#FAF5F8', borderRadius: '8px', borderLeft: '3px solid var(--color-secondary)' }}>
+              <div style={{ fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.2rem' }}>
+                Browser & OS Capabilities Disclosure
+              </div>
+              <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '0.825rem' }}>
+                Web and Progressive Web Applications rely on standard browser APIs (W3C Geolocation, MediaStreams). Continuous background location monitoring and silent background SOS execution when the device is locked or the browser tab is dismissed may be restricted by iOS Safari and Android power management. For active tracking, keep the application open.
+              </p>
+            </div>
+          </div>
+        </Card>
+
         {/* Account Actions */}
         <Card padding="lg">
           <h3 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--color-emergency)', marginBottom: '1rem' }}>

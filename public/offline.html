@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — SecureHer Women Safety</title>
+  <style>
+    :root {
+      --primary: #5B214F;
+      --secondary: #C75B7A;
+      --emergency: #D92D3A;
+      --bg: #FFF9FB;
+      --text: #29212A;
+      --muted: #7E6C79;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    .card {
+      background: #FFFFFF;
+      max-width: 520px;
+      width: 100%;
+      border-radius: 16px;
+      padding: 2rem;
+      border: 1px solid rgba(199, 91, 122, 0.25);
+      box-shadow: 0 10px 30px rgba(91, 33, 79, 0.08);
+    }
+    .icon-badge {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 28px;
+      margin-bottom: 1.25rem;
+    }
+    h1 {
+      font-size: 1.5rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+      font-weight: 800;
+    }
+    p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .notice {
+      background: #FFF0F2;
+      border-left: 4px solid var(--emergency);
+      padding: 0.75rem 1rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #8C1D24;
+      text-align: left;
+      margin-bottom: 1.5rem;
+      line-height: 1.4;
+    }
+    .helplines {
+      background: #FAF5F8;
+      border-radius: 10px;
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+    .helpline-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.75rem;
+    }
+    .helpline-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6rem;
+    }
+    .helpline-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 0.85rem;
+      background: #FFFFFF;
+      border: 1px solid rgba(199, 91, 122, 0.3);
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--primary);
+      font-weight: 700;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .helpline-btn:hover {
+      background: var(--primary);
+      color: #FFFFFF;
+    }
+    .btn-reload {
+      display: inline-block;
+      width: 100%;
+      padding: 0.85rem;
+      background: var(--primary);
+      color: #FFFFFF;
+      font-weight: 700;
+      border-radius: 10px;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      font-size: 0.95rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon-badge">🛡️</div>
+    <h1>You are Currently Offline</h1>
+    <p>No active internet connection was detected. Network-dependent services (cloud report backup, email SOS broadcasts) cannot reach external servers.</p>
+
+    <div class="notice">
+      ⚠️ <strong>Emergency Voice Calls Work Offline:</strong> Cellular phone calls do not require internet access. In immediate danger, call national emergency numbers directly.
+    </div>
+
+    <div class="helplines">
+      <div class="helpline-title">Offline Emergency Telephony Numbers</div>
+      <div class="helpline-grid">
+        <a href="tel:112" class="helpline-btn">
+          <span>National Emergency</span>
+          <span>112</span>
+        </a>
+        <a href="tel:1091" class="helpline-btn">
+          <span>Women Helpline</span>
+          <span>1091</span>
+        </a>
+        <a href="tel:181" class="helpline-btn">
+          <span>Domestic Distress</span>
+          <span>181</span>
+        </a>
+        <a href="tel:100" class="helpline-btn">
+          <span>Police Patrol</span>
+          <span>100</span>
+        </a>
+      </div>
+    </div>
+
+    <button class="btn-reload" onclick="window.location.href='/'">
+      Retry Connection & Return to App
+    </button>
+  </div>
+</body>
+</html>

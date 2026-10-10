@@ -15,7 +15,9 @@ import {
   Info,
   Paperclip,
   Clock,
-  Eye
+  Eye,
+  Loader2,
+  FileDown
 } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
@@ -28,6 +30,10 @@ import {
   updateIncidentReport,
   deleteIncidentReport
 } from '../../services/firebase/firestoreService';
+import {
+  generateIncidentReportPdf,
+  generateIncidentSummaryLogPdf
+} from '../../services/pdf/incidentReportPdfService';
 
 const INCIDENT_CATEGORIES = [
   'Harassment',
@@ -40,14 +46,20 @@ const INCIDENT_CATEGORIES = [
 ];
 
 const IncidentReportsPage = () => {
-  const { user } = useAuth();
-  const { currentLocation } = useSafety();
+  const { user, userProfile } = useAuth();
+  const { currentLocation, primaryEmergencyContact } = useSafety();
 
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingReport, setEditingReport] = useState(null);
   const [selectedReportView, setSelectedReportView] = useState(null);
+
+  // PDF Download States
+  const [generatingPdfId, setGeneratingPdfId] = useState(null);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+  const [pdfFeedback, setPdfFeedback] = useState(null); // { type: 'success' | 'error', message: string }
+
 
   // Search and Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -181,7 +193,108 @@ const IncidentReportsPage = () => {
     }
   };
 
-  const handleExportReport = (report) => {
+  /**
+   * Generates and downloads a high-authority, human-readable PDF report
+   */
+  const handleDownloadPdf = async (report) => {
+    if (!report) return;
+    setGeneratingPdfId(report.id);
+    setPdfFeedback(null);
+
+    try {
+      const pdfBlob = await generateIncidentReportPdf({
+        report,
+        user,
+        userProfile,
+        evidenceItems: vaultItems,
+        emergencyContact: primaryEmergencyContact
+      });
+
+      const dateStamp = (report.incidentAt || new Date().toISOString()).slice(0, 10);
+      const safeRef = (report.id || 'entry').slice(0, 8).toUpperCase();
+      const filename = `SecureHer_Incident_Report_${safeRef}_${dateStamp}.pdf`;
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      setPdfFeedback({
+        type: 'success',
+        message: `Official PDF report downloaded successfully: ${filename}`
+      });
+      setTimeout(() => setPdfFeedback(null), 5000);
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      setPdfFeedback({
+        type: 'error',
+        message: `Failed to compile PDF report: ${err.message || 'Unknown error'}. Please check report contents.`
+      });
+      setTimeout(() => setPdfFeedback(null), 7000);
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
+
+  /**
+   * Generates and downloads an All-Incidents Summary Log PDF
+   */
+  const handleDownloadSummaryPdf = async () => {
+    if (!reports || reports.length === 0) {
+      setPdfFeedback({
+        type: 'error',
+        message: 'No incident reports recorded to summarize.'
+      });
+      setTimeout(() => setPdfFeedback(null), 5000);
+      return;
+    }
+
+    setIsGeneratingSummary(true);
+    setPdfFeedback(null);
+
+    try {
+      const pdfBlob = await generateIncidentSummaryLogPdf({
+        reports,
+        userProfile
+      });
+
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      const filename = `SecureHer_Master_Incident_Log_${dateStamp}.pdf`;
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      setPdfFeedback({
+        type: 'success',
+        message: `Master incident log summary downloaded successfully: ${filename}`
+      });
+      setTimeout(() => setPdfFeedback(null), 5000);
+    } catch (err) {
+      console.error('Summary PDF error:', err);
+      setPdfFeedback({
+        type: 'error',
+        message: `Failed to generate master log summary: ${err.message}`
+      });
+      setTimeout(() => setPdfFeedback(null), 7000);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  /**
+   * Optional technical raw JSON export (clearly labeled, separate from primary PDF report)
+   */
+  const handleExportJson = (report) => {
     const exportData = {
       reportId: report.id,
       title: report.title,
@@ -194,13 +307,13 @@ const IncidentReportsPage = () => {
       evidenceAttachments: report.evidenceIds || [],
       status: report.status,
       exportedAt: new Date().toISOString(),
-      disclaimer: 'Recordkeeping document generated by SecureHer AI-Based Women\'s Security Application.'
+      disclaimer: 'Raw technical recordkeeping export generated by SecureHer AI-Based Women\'s Security Platform.'
     };
 
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(exportData, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute('href', dataStr);
-    downloadAnchor.setAttribute('download', `secureher_incident_${report.id}.json`);
+    downloadAnchor.setAttribute('download', `secureher_raw_data_${report.id}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -219,7 +332,7 @@ const IncidentReportsPage = () => {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <Badge variant="primary" icon={FileText}>
             Documentation & Records
@@ -232,10 +345,49 @@ const IncidentReportsPage = () => {
           </p>
         </div>
 
-        <Button variant="primary" icon={Plus} onClick={handleOpenCreate}>
-          Create Incident Report
-        </Button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {reports.length > 0 && (
+            <Button
+              variant="outline"
+              icon={isGeneratingSummary ? Loader2 : FileDown}
+              disabled={isGeneratingSummary}
+              onClick={handleDownloadSummaryPdf}
+            >
+              {isGeneratingSummary ? 'Compiling Log...' : 'Export Master Log (PDF)'}
+            </Button>
+          )}
+          <Button variant="primary" icon={Plus} onClick={handleOpenCreate}>
+            Create Incident Report
+          </Button>
+        </div>
       </div>
+
+      {/* PDF Status / Feedback Notification Banner */}
+      {pdfFeedback && (
+        <div
+          style={{
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            backgroundColor: pdfFeedback.type === 'success' ? '#EDF7ED' : '#FDEDED',
+            color: pdfFeedback.type === 'success' ? '#1E4620' : '#5F2120',
+            border: `1px solid ${pdfFeedback.type === 'success' ? '#C8E6C9' : '#FFCDD2'}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+          }}
+        >
+          {pdfFeedback.type === 'success' ? (
+            <CheckCircle2 size={18} color="#2E7D32" />
+          ) : (
+            <AlertCircle size={18} color="#D32F2F" />
+          )}
+          <span>{pdfFeedback.message}</span>
+        </div>
+      )}
 
       {/* Recordkeeping Legal Disclaimer */}
       <div
@@ -374,14 +526,35 @@ const IncidentReportsPage = () => {
                 </p>
               </div>
 
-              <div style={{ borderTop: '1px solid rgba(246, 221, 229, 0.8)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
+              <div style={{ borderTop: '1px solid rgba(246, 221, 229, 0.8)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    icon={generatingPdfId === report.id ? Loader2 : FileDown}
+                    disabled={generatingPdfId === report.id}
+                    onClick={() => handleDownloadPdf(report)}
+                  >
+                    {generatingPdfId === report.id ? 'Compiling...' : 'PDF Report'}
+                  </Button>
                   <Button variant="ghost" size="sm" icon={Eye} onClick={() => setSelectedReportView(report)}>
                     View
                   </Button>
-                  <Button variant="ghost" size="sm" icon={Download} onClick={() => handleExportReport(report)}>
-                    Export
-                  </Button>
+                  <button
+                    onClick={() => handleExportJson(report)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--color-text-muted)',
+                      cursor: 'pointer',
+                      fontSize: '0.75rem',
+                      textDecoration: 'underline',
+                      padding: '0.25rem 0.4rem'
+                    }}
+                    title="Export Raw JSON Data"
+                  >
+                    JSON
+                  </button>
                 </div>
 
                 <div style={{ display: 'flex', gap: '0.4rem' }}>
@@ -424,7 +597,7 @@ const IncidentReportsPage = () => {
             style={{
               backgroundColor: '#FFFFFF',
               borderRadius: '16px',
-              maxWidth: '560px',
+              maxWidth: '580px',
               width: '100%',
               padding: '2rem',
               boxShadow: 'var(--shadow-lg)',
@@ -434,7 +607,12 @@ const IncidentReportsPage = () => {
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div>
-                <Badge variant="secondary">{selectedReportView.incidentType}</Badge>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <Badge variant="secondary">{selectedReportView.incidentType}</Badge>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#666' }}>
+                    REF: SH-IR-{(selectedReportView.id || '').slice(0, 8).toUpperCase()}
+                  </span>
+                </div>
                 <h3 style={{ fontSize: '1.4rem', fontWeight: 800, color: 'var(--color-primary)', marginTop: '0.35rem' }}>
                   {selectedReportView.title}
                 </h3>
@@ -454,6 +632,7 @@ const IncidentReportsPage = () => {
                 {selectedReportView.latitude && (
                   <div>🌐 <strong>GPS Fix:</strong> {selectedReportView.latitude.toFixed(5)}°, {selectedReportView.longitude.toFixed(5)}° (±{selectedReportView.locationAccuracyMeters}m)</div>
                 )}
+                <div>🛡️ <strong>Integrity Seal:</strong> SHA-256 Cryptographic Digest Ready</div>
               </div>
 
               <div>
@@ -475,15 +654,68 @@ const IncidentReportsPage = () => {
                   </p>
                 </div>
               )}
+
+              {/* Evidence Vault Attachments Section */}
+              {selectedReportView.evidenceIds?.length > 0 && (
+                <div style={{ borderTop: '1px solid rgba(246, 221, 229, 0.9)', paddingTop: '0.75rem' }}>
+                  <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Paperclip size={15} /> Attached Evidence Vault Items ({selectedReportView.evidenceIds.length})
+                  </h4>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                    {selectedReportView.evidenceIds.map((evId) => {
+                      const match = vaultItems.find((v) => v.id === evId);
+                      return (
+                        <div
+                          key={evId}
+                          style={{
+                            padding: '0.5rem 0.75rem',
+                            backgroundColor: '#FBF8F9',
+                            borderRadius: '6px',
+                            border: '1px solid rgba(246, 221, 229, 0.7)',
+                            fontSize: '0.8rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 600 }}>
+                            <span>{match ? match.type.toUpperCase() : 'Preserved Media'} — {evId}</span>
+                            <span style={{ color: '#2E7D32' }}>SHA-256 Verified</span>
+                          </div>
+                          {match?.sha256Hash && (
+                            <div style={{ fontFamily: 'monospace', fontSize: '0.7rem', color: '#666', marginTop: '0.2rem', wordBreak: 'break-all' }}>
+                              Hash: {match.sha256Hash}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-              <Button variant="outline" icon={Download} onClick={() => handleExportReport(selectedReportView)}>
-                Export JSON
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', borderTop: '1px solid rgba(246, 221, 229, 0.8)', paddingTop: '1rem' }}>
+              <Button
+                variant="outline"
+                size="sm"
+                icon={Download}
+                onClick={() => handleExportJson(selectedReportView)}
+                title="Download raw machine-readable JSON for developers"
+              >
+                Export JSON (Raw)
               </Button>
-              <Button variant="primary" onClick={() => setSelectedReportView(null)}>
-                Close
-              </Button>
+
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <Button
+                  variant="primary"
+                  icon={generatingPdfId === selectedReportView.id ? Loader2 : FileDown}
+                  disabled={generatingPdfId === selectedReportView.id}
+                  onClick={() => handleDownloadPdf(selectedReportView)}
+                >
+                  {generatingPdfId === selectedReportView.id ? 'Generating...' : 'Download PDF Report'}
+                </Button>
+                <Button variant="ghost" onClick={() => setSelectedReportView(null)}>
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         </div>

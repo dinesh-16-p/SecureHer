@@ -14,20 +14,28 @@ import {
   FileCode,
   Info,
   Lock,
-  RefreshCw
+  RefreshCw,
+  FileDown,
+  Loader2
 } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
+import { useAuth } from '../../context/AuthContext';
 import { verifyEvidenceIntegrity, computeSHA256FromDataUrl } from '../../utils/cryptoUtils';
+import { generateEvidenceCertificatePdf } from '../../services/pdf/incidentReportPdfService';
 
 const EvidenceHistoryPage = () => {
+  const { userProfile } = useAuth();
   const [items, setItems] = useState([]);
   const [verifications, setVerifications] = useState({});
   const [verifyingId, setVerifyingId] = useState(null);
+  const [generatingPdfId, setGeneratingPdfId] = useState(null);
+  const [pdfToast, setPdfToast] = useState(null);
 
   useEffect(() => {
     loadStoredEvidence();
+
   }, []);
 
   const loadStoredEvidence = () => {
@@ -84,7 +92,47 @@ const EvidenceHistoryPage = () => {
     }
   };
 
-  const handleExportManifest = (item) => {
+  const handleDownloadCertificatePdf = async (item) => {
+    if (!item) return;
+    setGeneratingPdfId(item.id);
+    setPdfToast(null);
+
+    try {
+      const pdfBlob = await generateEvidenceCertificatePdf({
+        item,
+        userProfile
+      });
+
+      const safeId = (item.id || 'evidence').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const filename = `SecureHer_Evidence_Certificate_${safeId}.pdf`;
+
+      const downloadUrl = URL.createObjectURL(pdfBlob);
+      const anchor = document.createElement('a');
+      anchor.href = downloadUrl;
+      anchor.download = filename;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(downloadUrl);
+
+      setPdfToast({
+        type: 'success',
+        message: `Forensic Evidence Certificate PDF downloaded: ${filename}`
+      });
+      setTimeout(() => setPdfToast(null), 5000);
+    } catch (err) {
+      console.error('Certificate PDF generation error:', err);
+      setPdfToast({
+        type: 'error',
+        message: `Failed to compile evidence certificate: ${err.message}`
+      });
+      setTimeout(() => setPdfToast(null), 6000);
+    } finally {
+      setGeneratingPdfId(null);
+    }
+  };
+
+  const handleExportJsonManifest = (item) => {
     const manifest = {
       evidenceId: item.id,
       mediaType: item.type,
@@ -98,9 +146,10 @@ const EvidenceHistoryPage = () => {
         longitude: item.longitude ?? null,
         accuracyMeters: item.accuracy ?? null
       },
-      integrityAlgorithm: 'SHA-256',
+      integrityAlgorithm: 'SHA-256 (Web Crypto)',
       vaultPlatform: 'SecureHer Tamper-Evident Evidence Vault',
-      note: item.note || 'User incident documentation'
+      note: item.note || 'User incident documentation',
+      exportedAt: new Date().toISOString()
     };
 
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest, null, 2));
@@ -141,6 +190,33 @@ const EvidenceHistoryPage = () => {
           )}
         </div>
       </div>
+
+      {/* PDF / Manifest Toast Banner */}
+      {pdfToast && (
+        <div
+          style={{
+            padding: '0.85rem 1.25rem',
+            marginBottom: '1.5rem',
+            borderRadius: 'var(--radius-sm)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.75rem',
+            fontSize: '0.9rem',
+            fontWeight: 500,
+            backgroundColor: pdfToast.type === 'success' ? '#EDF7ED' : '#FDEDED',
+            color: pdfToast.type === 'success' ? '#1E4620' : '#5F2120',
+            border: `1px solid ${pdfToast.type === 'success' ? '#C8E6C9' : '#FFCDD2'}`,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.05)'
+          }}
+        >
+          {pdfToast.type === 'success' ? (
+            <CheckCircle2 size={18} color="#2E7D32" />
+          ) : (
+            <AlertTriangle size={18} color="#D32F2F" />
+          )}
+          <span>{pdfToast.message}</span>
+        </div>
+      )}
 
       {/* Honest Tamper-Evident Disclaimer */}
       <div
@@ -315,8 +391,17 @@ const EvidenceHistoryPage = () => {
                       {isVerifying ? 'Recalculating Hash...' : 'Verify File Integrity'}
                     </Button>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          icon={generatingPdfId === item.id ? Loader2 : FileDown}
+                          disabled={generatingPdfId === item.id}
+                          onClick={() => handleDownloadCertificatePdf(item)}
+                        >
+                          {generatingPdfId === item.id ? 'Compiling...' : 'PDF Certificate'}
+                        </Button>
                         <a
                           href={item.data}
                           download={`secureher_evidence_${item.id}.${item.type === 'photo' ? 'jpg' : 'webm'}`}
@@ -326,14 +411,21 @@ const EvidenceHistoryPage = () => {
                             Media
                           </Button>
                         </a>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          icon={FileCode}
-                          onClick={() => handleExportManifest(item)}
+                        <button
+                          onClick={() => handleExportJsonManifest(item)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: 'var(--color-text-muted)',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            textDecoration: 'underline',
+                            padding: '0.2rem 0.35rem'
+                          }}
+                          title="Download raw cryptographic JSON manifest"
                         >
-                          Manifest
-                        </Button>
+                          JSON
+                        </button>
                       </div>
 
                       <button

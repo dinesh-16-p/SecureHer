@@ -1,6 +1,53 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Sparkles, MessageSquare, X, Send, Shield, Bot } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { queryAI } from '../../services/ai/aiService';
+
+const SafeMarkdown = ({ content }) => {
+  return (
+    <div className="secureher-chat-markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          table: ({ children, ...props }) => (
+            <div className="table-responsive">
+              <table {...props}>{children}</table>
+            </div>
+          ),
+          code: ({ node, className, children, ...props }) => {
+            const isInline = !className && !String(children).includes('\n');
+            if (isInline) {
+              return (
+                <code className="inline-code" {...props}>
+                  {children}
+                </code>
+              );
+            }
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+          a: ({ node, href, children, ...props }) => {
+            const isSafe = href && /^(https?:\/\/|mailto:|tel:)/i.test(href.trim());
+            if (!isSafe) {
+              return <span>{children}</span>;
+            }
+            return (
+              <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+                {children}
+              </a>
+            );
+          }
+        }}
+      >
+        {content || ''}
+      </ReactMarkdown>
+    </div>
+  );
+};
 
 const SecureHerAI = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -146,18 +193,24 @@ const SecureHerAI = () => {
                 key={idx}
                 style={{
                   alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start',
-                  maxWidth: '85%',
+                  maxWidth: '88%',
                   padding: '0.75rem 1rem',
                   borderRadius: m.sender === 'user' ? '14px 14px 2px 14px' : '14px 14px 14px 2px',
                   backgroundColor: m.sender === 'user' ? 'var(--color-primary)' : '#FFFFFF',
-                  color: m.sender === 'user' ? '#FFFFFF' : 'var(--color-primary)',
+                  color: m.sender === 'user' ? '#FFFFFF' : 'var(--color-text)',
                   border: m.sender === 'user' ? 'none' : '1px solid rgba(246, 221, 229, 0.8)',
                   fontSize: '0.875rem',
                   lineHeight: '1.5',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word'
                 }}
               >
-                {m.text}
+                {m.sender === 'bot' ? (
+                  <SafeMarkdown content={m.text} />
+                ) : (
+                  <div style={{ whiteSpace: 'pre-wrap' }}>{m.text}</div>
+                )}
               </div>
             ))}
             {loading && (
