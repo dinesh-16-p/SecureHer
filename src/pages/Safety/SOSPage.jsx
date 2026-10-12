@@ -12,25 +12,28 @@ const SOSPage = () => {
   const {
     emergencyContacts,
     primaryEmergencyContact,
+    validEmailContacts,
     currentLocation,
     getCurrentPosition,
     sosActive,
     sosStatus,
     triggerSOS,
-    cancelSOS
+    cancelSOS,
+    resumeAlarm
   } = useSafety();
 
   const [holdProgress, setHoldProgress] = useState(0);
   const [isHolding, setIsHolding] = useState(false);
   const [isTriggering, setIsTriggering] = useState(false);
+  const [quickConfirmPending, setQuickConfirmPending] = useState(false);
+  const [quickConfirmCountdown, setQuickConfirmCountdown] = useState(0);
   const holdIntervalRef = useRef(null);
+  const quickConfirmTimerRef = useRef(null);
 
-  // Request location on entering SOS page if not yet acquired
+  // Request fresh location on entering SOS page so hardware GPS is primed with high accuracy
   useEffect(() => {
-    if (!currentLocation) {
-      getCurrentPosition();
-    }
-  }, [currentLocation, getCurrentPosition]);
+    getCurrentPosition({ forceFresh: true });
+  }, [getCurrentPosition]);
 
   const startHolding = () => {
     if (sosActive) return;
@@ -72,6 +75,38 @@ const SOSPage = () => {
       setIsTriggering(false);
     }
   };
+
+  const handleQuickTap = () => {
+    if (sosActive || isTriggering) return;
+    if (!quickConfirmPending) {
+      setQuickConfirmPending(true);
+      setQuickConfirmCountdown(3);
+      if (quickConfirmTimerRef.current) clearInterval(quickConfirmTimerRef.current);
+      let count = 3;
+      quickConfirmTimerRef.current = setInterval(() => {
+        count -= 1;
+        if (count <= 0) {
+          clearInterval(quickConfirmTimerRef.current);
+          setQuickConfirmPending(false);
+          setQuickConfirmCountdown(0);
+        } else {
+          setQuickConfirmCountdown(count);
+        }
+      }, 1000);
+    } else {
+      // Second deliberate tap within countdown confirms activation!
+      if (quickConfirmTimerRef.current) clearInterval(quickConfirmTimerRef.current);
+      setQuickConfirmPending(false);
+      setQuickConfirmCountdown(0);
+      handleActivate();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (quickConfirmTimerRef.current) clearInterval(quickConfirmTimerRef.current);
+    };
+  }, []);
 
   const googleMapsUrl = currentLocation
     ? `https://www.google.com/maps?q=${currentLocation.latitude},${currentLocation.longitude}`
@@ -155,21 +190,26 @@ const SOSPage = () => {
               </div>
             </div>
 
-            {/* Quick 1-Tap Trigger fallback */}
+            {/* Quick 2-Tap Trigger fallback */}
             <div style={{ marginBottom: '1.5rem' }}>
               <button
-                onClick={handleActivate}
+                onClick={handleQuickTap}
                 style={{
-                  background: 'none',
-                  border: 'none',
+                  background: quickConfirmPending ? 'rgba(217, 45, 58, 0.12)' : 'none',
+                  border: quickConfirmPending ? '1px solid var(--color-emergency)' : 'none',
+                  padding: quickConfirmPending ? '0.4rem 0.85rem' : '0',
+                  borderRadius: 'var(--radius-sm)',
                   color: 'var(--color-emergency)',
                   fontSize: '0.85rem',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  textDecoration: 'underline'
+                  textDecoration: quickConfirmPending ? 'none' : 'underline',
+                  transition: 'all 0.2s ease'
                 }}
               >
-                Or tap here for Instant Immediate Activation
+                {quickConfirmPending
+                  ? `⚠️ Tap again within ${quickConfirmCountdown}s to confirm SOS`
+                  : 'Or tap here to initiate instant SOS (requires 2-tap confirmation)'}
               </button>
             </div>
 
@@ -177,8 +217,20 @@ const SOSPage = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', textAlign: 'center', borderTop: '1px solid rgba(246, 221, 229, 0.8)', paddingTop: '1.25rem' }}>
               <div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>GPS Status</div>
-                <div style={{ fontSize: '0.875rem', fontWeight: 700, color: currentLocation ? 'var(--color-primary)' : 'var(--color-emergency)' }}>
-                  {currentLocation ? '✓ GPS Acquired' : 'Querying Location...'}
+                <div style={{
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
+                  color: !currentLocation
+                    ? 'var(--color-emergency)'
+                    : currentLocation.isStale
+                    ? '#B26A00'
+                    : '#2E7D32'
+                }}>
+                  {currentLocation
+                    ? (currentLocation.isStale
+                      ? `⚠️ Stale (±${Math.round(currentLocation.accuracy)}m)`
+                      : `✓ ${currentLocation.accuracyCategory === 'high' ? 'High Accuracy' : 'Live Fix'} (±${Math.round(currentLocation.accuracy)}m)`)
+                    : 'Querying Location...'}
                 </div>
               </div>
               <div>
@@ -231,49 +283,92 @@ const SOSPage = () => {
               🚨 EMERGENCY SOS ACTIVATED
             </h2>
             <p style={{ fontSize: '1rem', color: 'var(--color-text)', marginBottom: '1.5rem', fontWeight: 600 }}>
-              Siren alarm is sounding and emergency notification has been broadcast.
+              Siren alarm is sounding and emergency notification has been dispatched.
             </p>
 
             {/* Real Status Cards */}
             <div style={{ backgroundColor: 'var(--color-background)', padding: '1.25rem', borderRadius: 'var(--radius-md)', textAlign: 'left', marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              {/* Sound Alarm Status */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+              {/* Sound Alarm Status with honest autoplay policy handling */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)' }}>
                   <Volume2 size={18} color="var(--color-emergency)" /> <strong>Siren Alarm:</strong>
                 </span>
-                <span style={{ color: 'var(--color-emergency)', fontWeight: 700 }}>
-                  Active (Continuous Tone)
-                </span>
+                {sosStatus.alarmAutoplayBlocked ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ color: '#B26A00', fontWeight: 700, fontSize: '0.85rem' }}>
+                      🔇 Muted by Browser Policy
+                    </span>
+                    <button
+                      onClick={resumeAlarm}
+                      style={{
+                        backgroundColor: 'var(--color-emergency)',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: 'var(--radius-sm)',
+                        padding: '0.25rem 0.6rem',
+                        fontSize: '0.75rem',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      🔊 Unmute Siren
+                    </button>
+                  </div>
+                ) : (
+                  <span style={{ color: 'var(--color-emergency)', fontWeight: 700 }}>
+                    {sosStatus.alarmPlaying ? 'Active (Continuous Siren) 🔊' : 'Alarm Idle'}
+                  </span>
+                )}
               </div>
 
               {/* Location Status */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)' }}>
-                  <MapPin size={18} color="var(--color-secondary)" /> <strong>Live GPS:</strong>
+                  <MapPin size={18} color="var(--color-secondary)" /> <strong>Dispatched Location:</strong>
                 </span>
                 {currentLocation ? (
-                  <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'underline' }}>
-                    {currentLocation.latitude.toFixed(4)}°, {currentLocation.longitude.toFixed(4)}° <ExternalLink size={12} />
-                  </a>
+                  <div style={{ textAlign: 'right' }}>
+                    <a href={googleMapsUrl} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-primary)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'underline' }}>
+                      {currentLocation.latitude.toFixed(4)}°, {currentLocation.longitude.toFixed(4)}° <ExternalLink size={12} />
+                    </a>
+                    <div style={{ fontSize: '0.75rem', color: currentLocation.isStale ? '#D92D3A' : '#2E7D32', fontWeight: 600 }}>
+                      {sosStatus.locationStatus === 'fresh' && `✓ Live GPS (±${Math.round(currentLocation.accuracy)}m)`}
+                      {sosStatus.locationStatus === 'recent' && `✓ Recent GPS (${currentLocation.ageSec || Math.round(currentLocation.ageMs / 1000)}s ago, ±${Math.round(currentLocation.accuracy)}m)`}
+                      {sosStatus.locationStatus === 'stale' && `⚠️ Stale GPS (${currentLocation.ageSec || Math.round(currentLocation.ageMs / 1000)}s ago, ±${Math.round(currentLocation.accuracy)}m)`}
+                      {(!sosStatus.locationStatus || sosStatus.locationStatus === 'unavailable') && (currentLocation.isStale ? '⚠️ Stale position' : `✓ Live GPS (±${Math.round(currentLocation.accuracy)}m)`)}
+                    </div>
+                  </div>
                 ) : (
-                  <span style={{ color: 'var(--color-text-muted)' }}>Location unavailable</span>
+                  <span style={{ color: 'var(--color-emergency)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    GPS Unavailable (Dispatched Without Coordinates)
+                  </span>
                 )}
               </div>
 
-              {/* Email Status */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+              {/* Email Provider Status */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)' }}>
-                  <Mail size={18} color="var(--color-primary)" /> <strong>Emergency Email:</strong>
+                  <Mail size={18} color="var(--color-primary)" /> <strong>Emergency Dispatch:</strong>
                 </span>
-                {sosStatus.emailSent ? (
-                  <span style={{ color: '#2E7D32', fontWeight: 700 }}>
-                    Delivered ✓ ({primaryEmergencyContact?.email})
+                {sosStatus.emailStatus === 'provider_accepted' || sosStatus.emailSent ? (
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ color: '#2E7D32', fontWeight: 700 }}>
+                      Dispatched (Accepted by Provider) ✓
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      To: {sosStatus.recipients?.join(', ') || primaryEmergencyContact?.email}
+                      {sosStatus.messageId && ` • ID: ${sosStatus.messageId.slice(0, 16)}...`}
+                    </div>
+                  </div>
+                ) : sosStatus.emailStatus === 'unreachable' ? (
+                  <span style={{ color: 'var(--color-emergency)', fontWeight: 700 }}>
+                    Backend Unreachable ✗ (Call 112 directly)
                   </span>
                 ) : (
                   <span style={{ color: 'var(--color-emergency)', fontWeight: 600 }}>
                     {primaryEmergencyContact
-                      ? `Delivery Unconfirmed ✗ (${primaryEmergencyContact.email})`
-                      : 'No email configured'}
+                      ? `Dispatch Failed ✗ (${primaryEmergencyContact.email})`
+                      : 'No contact email configured'}
                   </span>
                 )}
               </div>

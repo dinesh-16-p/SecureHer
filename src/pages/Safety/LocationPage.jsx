@@ -6,6 +6,7 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import { useSafety } from '../../context/SafetyContext';
+import { updateAccuracyCircleOnMap, removeAccuracyCircleFromMap } from '../../services/map/mapUtils';
 
 // ─── MapTiler style definitions ───────────────────────────────────────────────
 const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_API_KEY || 'BE8E5HFWGrNH05pGD0M4';
@@ -88,11 +89,11 @@ const LocationPage = () => {
     };
   }, []); // only once
 
-  // ── 3. Update MARKER when location changes (no flyTo on every update) ────────
+  // ── 3. Update MARKER & ACCURACY CIRCLE when location changes ────────
   useEffect(() => {
     if (!mapRef.current || !currentLocation) return;
 
-    const { latitude, longitude } = currentLocation;
+    const { latitude, longitude, accuracy } = currentLocation;
     const lngLat = [longitude, latitude]; // GeoJSON order: [lng, lat]
 
     if (!markerRef.current) {
@@ -112,6 +113,18 @@ const LocationPage = () => {
       markerRef.current.setLngLat(lngLat);
     }
 
+    // Render geodesic accuracy radius circle
+    if (accuracy != null) {
+      updateAccuracyCircleOnMap(
+        mapRef.current,
+        'location-accuracy-circle',
+        longitude,
+        latitude,
+        accuracy,
+        { fillColor: '#D92D3A', lineColor: '#D92D3A', fillOpacity: 0.12, lineOpacity: 0.5 }
+      );
+    }
+
     // Fly to GPS position ONLY the first time we get a real fix
     if (mapLoaded && !isCenteredRef.current) {
       mapRef.current.flyTo({ center: lngLat, zoom: 15, speed: 1.4, essential: true });
@@ -129,13 +142,13 @@ const LocationPage = () => {
 
     mapRef.current.setStyle(style.url);
 
-    // After style loads, restore the marker (setStyle removes all layers/markers)
+    // After style loads, restore the marker & accuracy circle (setStyle removes all layers/sources)
     mapRef.current.once('style.load', () => {
       if (markerRef.current && currentLocation) {
         markerRef.current.remove();
         markerRef.current = null;
 
-        const { latitude, longitude } = currentLocation;
+        const { latitude, longitude, accuracy } = currentLocation;
         const el = document.createElement('div');
         el.style.cssText = `
           width:20px; height:20px; border-radius:50%;
@@ -145,6 +158,17 @@ const LocationPage = () => {
         markerRef.current = new maplibregl.Marker({ element: el })
           .setLngLat([longitude, latitude])
           .addTo(mapRef.current);
+
+        if (accuracy != null) {
+          updateAccuracyCircleOnMap(
+            mapRef.current,
+            'location-accuracy-circle',
+            longitude,
+            latitude,
+            accuracy,
+            { fillColor: '#D92D3A', lineColor: '#D92D3A', fillOpacity: 0.12, lineOpacity: 0.5 }
+          );
+        }
       }
     });
   }, [currentLocation]);
@@ -164,6 +188,9 @@ const LocationPage = () => {
   // ── 6. Cleanup on unmount ─────────────────────────────────────────────────────
   useEffect(() => {
     return () => {
+      if (mapRef.current) {
+        removeAccuracyCircleFromMap(mapRef.current, 'location-accuracy-circle');
+      }
       markerRef.current?.remove();
       markerRef.current = null;
       mapRef.current?.remove();
@@ -189,9 +216,13 @@ const LocationPage = () => {
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
-  const accuracyLevel = currentLocation?.accuracy
-    ? currentLocation.accuracy <= GOOD_ACCURACY_THRESHOLD ? 'good' : 'poor'
-    : null;
+  const accuracyLevel = currentLocation?.accuracyCategory || (
+    currentLocation?.accuracy != null
+      ? (currentLocation.accuracy <= 20 ? 'high' : currentLocation.accuracy <= 100 ? 'moderate' : 'poor')
+      : null
+  );
+
+  const isStaleFix = currentLocation ? (currentLocation.isStale || (currentLocation.ageMs > 120000)) : false;
 
   const activeStyle = MAP_STYLES.find(s => s.id === activeStyleId);
 
@@ -296,8 +327,13 @@ const LocationPage = () => {
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--color-primary)', display: 'block' }}>
                       📍 {currentLocation.latitude.toFixed(6)}°N, {currentLocation.longitude.toFixed(6)}°E
                     </span>
-                    <span style={{ fontSize: '0.75rem', color: accuracyLevel === 'poor' ? '#D92D3A' : '#2E7D32', fontWeight: 600 }}>
-                      {accuracyLevel === 'poor' ? '⚠️' : '✓'} Accuracy: ±{Math.round(currentLocation.accuracy)}m
+                    <span style={{
+                      fontSize: '0.75rem',
+                      color: isStaleFix ? '#D92D3A' : accuracyLevel === 'high' ? '#2E7D32' : accuracyLevel === 'moderate' ? '#B26A00' : '#D92D3A',
+                      fontWeight: 700
+                    }}>
+                      {isStaleFix ? '⚠️ Stale Fix: ' : accuracyLevel === 'high' ? '✓ High Accuracy: ' : accuracyLevel === 'moderate' ? '⚡ Moderate Accuracy: ' : '⚠️ Poor Accuracy: '}
+                      ±{Math.round(currentLocation.accuracy)}m
                       {currentLocation.timestamp && (
                         <> &nbsp;·&nbsp; <Clock size={10} style={{ display: 'inline', verticalAlign: 'middle' }} /> {formatTimestamp(currentLocation.timestamp)}</>
                       )}
@@ -326,7 +362,9 @@ const LocationPage = () => {
             <Card padding="md" style={{ marginTop: '1rem', border: '2px solid var(--color-secondary)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                 <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--color-primary)' }}>Google Maps Link:</span>
-                <span style={{ fontSize: '0.75rem', color: '#2E7D32', fontWeight: 700 }}>● Live</span>
+                <span style={{ fontSize: '0.75rem', color: isStaleFix ? '#D92D3A' : '#2E7D32', fontWeight: 700 }}>
+                  {isStaleFix ? '● Stale (Last-Known)' : '● Live'}
+                </span>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <input type="text" readOnly value={shareUrl}
@@ -361,7 +399,20 @@ const LocationPage = () => {
               {[
                 { label: 'Latitude',  value: currentLocation ? `${currentLocation.latitude.toFixed(6)}°` : '—' },
                 { label: 'Longitude', value: currentLocation ? `${currentLocation.longitude.toFixed(6)}°` : '—' },
-                { label: 'Accuracy',  value: currentLocation?.accuracy ? `±${Math.round(currentLocation.accuracy)} m` : '—', warn: accuracyLevel === 'poor' },
+                {
+                  label: 'Accuracy',
+                  value: currentLocation?.accuracy
+                    ? `±${Math.round(currentLocation.accuracy)} m (${accuracyLevel ? accuracyLevel.toUpperCase() : 'UNKNOWN'})`
+                    : '—',
+                  warn: accuracyLevel === 'poor'
+                },
+                {
+                  label: 'Freshness',
+                  value: currentLocation
+                    ? (isStaleFix ? 'Stale (Last-Known)' : 'Live / Fresh')
+                    : '—',
+                  warn: isStaleFix
+                },
                 { label: 'Last Fix',  value: currentLocation?.timestamp ? formatTimestamp(currentLocation.timestamp) : '—' },
               ].map(row => (
                 <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem 0', borderBottom: '1px solid rgba(246,221,229,0.6)' }}>
@@ -369,9 +420,14 @@ const LocationPage = () => {
                   <span style={{ fontSize: '0.82rem', fontWeight: 700, color: row.warn ? '#D92D3A' : 'var(--color-primary)' }}>{row.value}</span>
                 </div>
               ))}
-              {accuracyLevel === 'poor' && (
+              {accuracyLevel === 'poor' && !isStaleFix && (
                 <div style={{ padding: '0.6rem 0.75rem', background: 'rgba(217,45,58,0.08)', borderRadius: '6px', fontSize: '0.8rem', color: '#D92D3A', fontWeight: 600 }}>
-                  ⚠️ Low GPS accuracy. Move to open sky for better signal.
+                  ⚠️ Low GPS accuracy (&gt; 100m). Move toward open sky or enable Wi-Fi for improved triangulation.
+                </div>
+              )}
+              {isStaleFix && (
+                <div style={{ padding: '0.6rem 0.75rem', background: 'rgba(217,45,58,0.08)', borderRadius: '6px', fontSize: '0.8rem', color: '#D92D3A', fontWeight: 600 }}>
+                  ⚠️ Location fix is stale (&gt; 120s old). Tap Recenter to obtain a fresh GPS fix.
                 </div>
               )}
             </div>

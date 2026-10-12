@@ -17,7 +17,73 @@ export const getPermissionStatus = async (name) => {
   }
 };
 
-export const requestLocationAccess = () => {
+export const LOCATION_MAX_AGE_MS = 120000; // 120 seconds maximum location age for safety-sensitive operations
+
+export const ACCURACY_THRESHOLDS = {
+  HIGH: 20,      // <= 20 meters: High accuracy (GPS satellite lock)
+  MODERATE: 100  // <= 100 meters: Moderate accuracy (Wi-Fi / Cell triangulation)
+  // > 100 meters: Poor accuracy (Coarse cell tower / IP geolocation)
+};
+
+/**
+ * Categorize GPS accuracy into High, Moderate, or Poor.
+ * High: <= 20m, Moderate: 21-100m, Poor: > 100m
+ */
+export const getAccuracyCategory = (accuracyMeters) => {
+  if (accuracyMeters == null || isNaN(accuracyMeters)) return 'unknown';
+  if (accuracyMeters <= ACCURACY_THRESHOLDS.HIGH) return 'high';
+  if (accuracyMeters <= ACCURACY_THRESHOLDS.MODERATE) return 'moderate';
+  return 'poor';
+};
+
+/**
+ * Check if a location fix is fresh based on its timestamp.
+ */
+export const isLocationFresh = (locationOrTimestamp, maxAgeMs = LOCATION_MAX_AGE_MS) => {
+  if (!locationOrTimestamp) return false;
+  const ts = typeof locationOrTimestamp === 'number'
+    ? locationOrTimestamp
+    : locationOrTimestamp.timestamp;
+  if (!ts) return false;
+  const age = Date.now() - ts;
+  return age >= 0 && age <= maxAgeMs;
+};
+
+/**
+ * Normalizes and annotates a raw GeolocationPosition with quality metadata.
+ */
+export const formatLocationFix = (position, customOptions = {}) => {
+  const coords = position.coords || {};
+  const timestamp = position.timestamp || Date.now();
+  const accuracy = typeof coords.accuracy === 'number' ? Math.round(coords.accuracy * 10) / 10 : null;
+  const ageMs = Math.max(0, Date.now() - timestamp);
+  const maxAge = customOptions.maxAgeMs || LOCATION_MAX_AGE_MS;
+  const isFresh = ageMs <= maxAge;
+
+  return {
+    latitude: coords.latitude,
+    longitude: coords.longitude,
+    accuracy,
+    accuracyCategory: getAccuracyCategory(accuracy),
+    heading: coords.heading ?? null,
+    speed: coords.speed ?? null,
+    altitude: coords.altitude ?? null,
+    timestamp,
+    ageMs,
+    isFresh,
+    isStale: !isFresh,
+    source: customOptions.source || 'gps'
+  };
+};
+
+export const requestLocationAccess = (options = {}) => {
+  const {
+    enableHighAccuracy = true,
+    timeout = 12000,
+    maximumAge = 0, // Default to 0 to prefer a fresh hardware fix for safety operations
+    maxAgeMs = LOCATION_MAX_AGE_MS
+  } = options;
+
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) {
       reject(new Error('Geolocation is not supported by your browser.'));
@@ -26,12 +92,8 @@ export const requestLocationAccess = () => {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        resolve({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-          accuracy: position.coords.accuracy,
-          timestamp: position.timestamp
-        });
+        const fix = formatLocationFix(position, { maxAgeMs, source: 'gps' });
+        resolve(fix);
       },
       (error) => {
         let message = 'Unable to retrieve location.';
@@ -53,38 +115,39 @@ export const requestLocationAccess = () => {
         reject(customErr);
       },
       {
-        enableHighAccuracy: true,
-        timeout: 12000,
-        maximumAge: 10000
+        enableHighAccuracy,
+        timeout,
+        maximumAge
       }
     );
   });
 };
 
-export const watchLocationAccess = (onSuccess, onError) => {
+export const watchLocationAccess = (onSuccess, onError, options = {}) => {
   if (!navigator.geolocation) {
-    onError(new Error('Geolocation is not supported.'));
+    if (onError) onError(new Error('Geolocation is not supported.'));
     return null;
   }
 
+  const {
+    enableHighAccuracy = true,
+    timeout = 15000,
+    maximumAge = 5000,
+    maxAgeMs = LOCATION_MAX_AGE_MS
+  } = options;
+
   return navigator.geolocation.watchPosition(
     (position) => {
-      onSuccess({
-        latitude: position.coords.latitude,
-        longitude: position.coords.longitude,
-        accuracy: position.coords.accuracy,
-        heading: position.coords.heading,
-        speed: position.coords.speed,
-        timestamp: position.timestamp
-      });
+      const fix = formatLocationFix(position, { maxAgeMs, source: 'watch' });
+      if (onSuccess) onSuccess(fix);
     },
     (error) => {
-      onError(error);
+      if (onError) onError(error);
     },
     {
-      enableHighAccuracy: true,
-      timeout: 15000,
-      maximumAge: 5000
+      enableHighAccuracy,
+      timeout,
+      maximumAge
     }
   );
 };

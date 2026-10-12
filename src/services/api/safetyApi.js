@@ -27,7 +27,17 @@ export const checkBackendHealth = async () => {
   }
 };
 
-export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recipientEmail, recipientName, userName, userPhone }) => {
+export const sendSOSAlert = async ({
+  token,
+  latitude,
+  longitude,
+  accuracy,
+  recipientEmail,
+  recipientName,
+  recipients,
+  userName,
+  userPhone
+}) => {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 12000);
@@ -46,6 +56,7 @@ export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recip
       accuracy: accuracy ?? null,
       recipientEmail: recipientEmail || null,
       recipientName: recipientName || null,
+      recipients: Array.isArray(recipients) && recipients.length > 0 ? recipients : undefined,
       userName: userName || 'SecureHer User',
       userPhone: userPhone || '',
       timestamp: new Date().toISOString()
@@ -61,27 +72,41 @@ export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recip
 
     const result = await response.json().catch(() => ({}));
 
-    if (response.ok && result.success && result.emailStatus === 'sent') {
+    // Provider accepted or sent status from Brevo dispatch
+    if (response.ok && result.success && (result.emailStatus === 'provider_accepted' || result.emailStatus === 'sent')) {
       return {
         success: true,
         backendAvailable: true,
-        emailSent: true,
-        emailStatus: 'sent',
+        emailSent: true, // indicates dispatched and accepted by provider
+        emailStatus: result.emailStatus || 'provider_accepted',
+        providerStatus: result.providerStatus || 'accepted',
         locationStatus: result.locationStatus || (latitude ? 'available' : 'unavailable'),
         messageId: result.messageId,
-        message: result.message || `Emergency alert email sent to ${recipientEmail}`,
+        recipients: result.recipients || (recipientEmail ? [recipientEmail] : []),
+        message: result.message || `Emergency alert accepted by email provider for ${recipientEmail}`,
         data: result
       };
     } else {
-      const errorDetail = result.detail || result.error || result.message || 'Email delivery could not be confirmed.';
+      const errorDetail =
+        result.detail ||
+        result.error ||
+        result.message ||
+        (response.status === 401
+          ? 'Authentication token invalid or expired'
+          : response.status === 400
+          ? 'Invalid SOS parameters or missing recipient'
+          : 'Emergency alert dispatch could not be processed.');
       return {
         success: false,
         backendAvailable: true,
         emailSent: false,
-        emailStatus: 'failed',
+        emailStatus: result.emailStatus || 'failed',
+        providerStatus: result.providerStatus || 'rejected',
         locationStatus: latitude ? 'available' : 'unavailable',
+        recipients: result.recipients || (recipientEmail ? [recipientEmail] : []),
         message: errorDetail,
         error: errorDetail,
+        statusCode: response.status,
         data: result
       };
     }
@@ -91,6 +116,7 @@ export const sendSOSAlert = async ({ token, latitude, longitude, accuracy, recip
       backendAvailable: false,
       emailSent: false,
       emailStatus: 'unreachable',
+      providerStatus: 'unreachable',
       locationStatus: latitude ? 'available' : 'unavailable',
       message: 'FastAPI backend service is currently unreachable. Please contact your emergency contact directly or call 112.',
       error: err.message
@@ -146,15 +172,25 @@ export const shareJourneyProgress = async ({
 
     const result = await response.json().catch(() => ({}));
     if (response.ok && result.success) {
-      return { success: true, message: result.message || 'Journey progress shared.' };
+      return {
+        success: true,
+        emailStatus: result.emailStatus || 'sent',
+        recipient: recipientEmail,
+        messageId: result.messageId,
+        message: result.message || `Journey progress shared with ${recipientEmail}.`
+      };
     }
     return {
       success: false,
+      emailStatus: result.emailStatus || 'failed',
+      recipient: recipientEmail,
       message: result.detail || result.message || 'Could not send journey email update.'
     };
   } catch (err) {
     return {
       success: false,
+      emailStatus: 'unreachable',
+      recipient: recipientEmail,
       message: err.message || 'Network error while contacting journey sharing service.'
     };
   }

@@ -1,7 +1,8 @@
 import os
 import sys
 import logging
-from typing import Optional, Dict, Any
+import re
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 from fastapi import FastAPI, HTTPException, Header, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,12 +60,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+class ContactRecipient(BaseModel):
+    email: str
+    name: Optional[str] = None
+
 class SOSRequest(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     accuracy: Optional[float] = None
     recipientEmail: Optional[str] = None
     recipientName: Optional[str] = None
+    recipients: Optional[List[ContactRecipient]] = None
     userName: Optional[str] = "SecureHer User"
     userPhone: Optional[str] = ""
     timestamp: Optional[str] = None
@@ -129,25 +135,55 @@ def health_check():
 @app.post("/api/sos")
 def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None)):
     """
-    Dispatches real emergency SOS email to the user's configured emergency contact via Brevo API.
+    Dispatches real emergency SOS email to the user's configured emergency contact(s) via Brevo API.
     """
     logger.info("Received SOS alert request")
 
-    auth_user = verify_firebase_token(authorization)
+    # 1. Authenticate user token if provided or required
+    auth_user = None
+    if authorization:
+        auth_user = verify_firebase_token(authorization)
+        if not auth_user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired Firebase authentication token."
+            )
+    elif FIREBASE_API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication token required for emergency SOS dispatch."
+        )
+
     user_name = auth_user.get("displayName") if auth_user and auth_user.get("displayName") else (req.userName or "SecureHer User")
 
-    recipient_email = (req.recipientEmail or "").strip()
-    if not recipient_email or "@" not in recipient_email:
+    # 2. Validate recipients
+    email_regex = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
+    raw_recipients = []
+    if req.recipients and len(req.recipients) > 0:
+        for r in req.recipients:
+            if r.email and r.email.strip():
+                raw_recipients.append({"email": r.email.strip(), "name": (r.name or "").strip()})
+    elif req.recipientEmail and req.recipientEmail.strip():
+        raw_recipients.append({"email": req.recipientEmail.strip(), "name": (req.recipientName or "").strip()})
+
+    valid_recipients = [r for r in raw_recipients if email_regex.match(r["email"])]
+
+    if not valid_recipients:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No emergency contact email provided. Please configure an emergency contact in SecureHer."
+            detail="No valid emergency contact email provided. Please configure an emergency contact with a valid email address."
         )
+
+    recipient_emails = [r["email"] for r in valid_recipients]
+    recipient_display = ", ".join(recipient_emails)
 
     map_link = ""
     location_text = "GPS coordinates not available"
     location_status = "unavailable"
     if req.latitude is not None and req.longitude is not None:
         location_text = f"{req.latitude:.5f}° N, {req.longitude:.5f}° E"
+        if req.accuracy is not None:
+            location_text += f" (Accuracy: ±{int(round(req.accuracy))}m)"
         map_link = f"https://www.google.com/maps?q={req.latitude},{req.longitude}"
         location_status = "available"
 
@@ -224,9 +260,11 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
         return {
             "success": False,
             "emailStatus": "failed",
+            "providerStatus": "missing_credentials",
             "locationStatus": location_status,
-            "message": "Brevo email API is not configured on the backend server. Set BREVO_API_KEY & BREVO_SENDER_EMAIL in backend/.env.",
-            "recipient": recipient_email
+            "message": "Brevo email API is not configured on the backend server. Set BREVO_API_KEY and BREVO_SENDER_EMAIL in backend configuration.",
+            "recipients": recipient_emails,
+            "recipient": recipient_emails[0]
         }
 
     brevo_url = "https://api.brevo.com/v3/smtp/email"
@@ -243,49 +281,58 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
         },
         "to": [
             {
-                "email": recipient_email,
-                "name": req.recipientName or recipient_email
+                "email": r["email"],
+                "name": r["name"] or r["email"]
             }
+            for r in valid_recipients
         ],
         "subject": subject,
         "htmlContent": html_content
     }
 
     try:
-        logger.info(f"Dispatching SOS email via Brevo → sender: {BREVO_SENDER_EMAIL} → recipient: {recipient_email}")
+        logger.info("Dispatching SOS email via Brevo to %d recipient(s)", len(valid_recipients))
         response = requests.post(brevo_url, json=payload, headers=headers, timeout=10)
-        logger.info(f"Brevo response status: {response.status_code}")
+        logger.info("Brevo response status: %s", response.status_code)
         if response.status_code in [200, 201, 202]:
             resp_data = response.json() if response.text else {}
             message_id = resp_data.get("messageId", "ok")
-            logger.info(f"Brevo SOS email sent successfully. messageId={message_id}")
+            logger.info("Brevo accepted SOS alert email. messageId=%s", message_id)
             return {
                 "success": True,
-                "emailStatus": "sent",
+                "emailStatus": "provider_accepted",
+                "providerStatus": "accepted",
                 "messageId": message_id,
                 "locationStatus": location_status,
-                "message": f"Emergency alert email successfully sent to {recipient_email}.",
-                "recipient": recipient_email
+                "recipients": recipient_emails,
+                "recipient": recipient_emails[0],
+                "message": f"Emergency alert accepted by email provider for {recipient_display}.",
+                "timestamp": datetime.utcnow().isoformat()
             }
         else:
             brevo_error = response.text[:500] if response.text else "(empty response)"
-            logger.error(f"Brevo rejected SOS email. Status {response.status_code}: {brevo_error}")
+            logger.error("Brevo rejected SOS email. Status %s: %s", response.status_code, brevo_error)
             return {
                 "success": False,
                 "emailStatus": "failed",
+                "providerStatus": "rejected",
                 "locationStatus": location_status,
                 "error": f"Brevo API returned HTTP {response.status_code}",
-                "message": f"Email delivery failed (Brevo HTTP {response.status_code}). Verify BREVO_SENDER_EMAIL is a verified sender in your Brevo account.",
-                "recipient": recipient_email
+                "message": f"Email provider rejected dispatch (HTTP {response.status_code}). Verify BREVO_SENDER_EMAIL is a verified sender in Brevo.",
+                "recipients": recipient_emails,
+                "recipient": recipient_emails[0]
             }
     except Exception as e:
         logger.error(f"Brevo connection error during SOS dispatch: {e}")
         return {
             "success": False,
             "emailStatus": "failed",
+            "providerStatus": "network_error",
             "locationStatus": location_status,
             "error": str(e),
-            "message": f"Connection error while contacting Brevo: {str(e)}"
+            "message": f"Connection error while contacting Brevo: {str(e)}",
+            "recipients": recipient_emails,
+            "recipient": recipient_emails[0]
         }
 
 @app.post("/api/journey/share")

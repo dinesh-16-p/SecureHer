@@ -14,7 +14,7 @@ class SOSAlarmService {
   }
 
   initContext() {
-    if (!this.audioCtx) {
+    if (!this.audioCtx && typeof window !== 'undefined') {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
       if (AudioContext) {
         this.audioCtx = new AudioContext();
@@ -22,16 +22,29 @@ class SOSAlarmService {
     }
   }
 
-  play() {
+  async play() {
     try {
       this.initContext();
-      if (!this.audioCtx) return;
-
-      if (this.audioCtx.state === 'suspended') {
-        this.audioCtx.resume();
+      if (!this.audioCtx) {
+        return { success: false, reason: 'unsupported' };
       }
 
-      if (this.isPlaying) return;
+      if (this.audioCtx.state === 'suspended') {
+        try {
+          await this.audioCtx.resume();
+        } catch (resumeErr) {
+          console.warn('AudioContext resume was blocked by browser autoplay policy:', resumeErr);
+        }
+      }
+
+      // Check if browser blocked audio playback due to autoplay policy
+      if (this.audioCtx.state === 'suspended') {
+        return { success: false, reason: 'autoplay_blocked', state: 'suspended' };
+      }
+
+      if (this.isPlaying) {
+        return { success: true, reason: 'already_playing', state: this.audioCtx.state };
+      }
 
       this.isPlaying = true;
 
@@ -47,7 +60,7 @@ class SOSAlarmService {
       this.oscillator.connect(this.gainNode);
       this.oscillator.start();
 
-      // Modulate frequency to create European/Standard Emergency Siren (800Hz <-> 1200Hz)
+      // Modulate frequency to create European/Standard Emergency Siren (750Hz <-> 1200Hz)
       let high = false;
       this.intervalId = setInterval(() => {
         if (!this.isPlaying || !this.audioCtx || !this.oscillator) return;
@@ -57,9 +70,22 @@ class SOSAlarmService {
         high = !high;
       }, 350);
 
+      return { success: true, reason: 'playing', state: this.audioCtx.state };
     } catch (err) {
       console.warn('Unable to play SOS audio synthesizer:', err);
+      return { success: false, reason: 'error', error: err.message };
     }
+  }
+
+  async resume() {
+    if (this.audioCtx && this.audioCtx.state === 'suspended') {
+      try {
+        await this.audioCtx.resume();
+      } catch (e) {
+        console.warn('Manual audio resume failed:', e);
+      }
+    }
+    return this.play();
   }
 
   stop() {
@@ -84,7 +110,10 @@ class SOSAlarmService {
   }
 
   getStatus() {
-    return this.isPlaying;
+    return {
+      isPlaying: this.isPlaying,
+      state: this.audioCtx ? this.audioCtx.state : 'uninitialized'
+    };
   }
 }
 

@@ -86,9 +86,17 @@ export const logSafetyEvent = async (uid, eventData) => {
     latitude: eventData.latitude ?? null,
     longitude: eventData.longitude ?? null,
     accuracy: eventData.accuracy ?? null,
+    accuracyCategory: eventData.accuracyCategory || 'unknown',
+    locationStatus: eventData.locationStatus || 'unavailable',
+    locationTimestamp: eventData.locationTimestamp || null,
+    isLocationStale: eventData.isLocationStale ?? false,
     emailStatus: eventData.emailStatus || 'pending',
+    providerStatus: eventData.providerStatus || null,
     recipientEmail: eventData.recipientEmail || null,
+    recipients: eventData.recipients || (eventData.recipientEmail ? [eventData.recipientEmail] : []),
     backendMessage: eventData.backendMessage || null,
+    messageId: eventData.messageId || null,
+    clientTimestamp: eventData.clientTimestamp || new Date().toISOString(),
     createdAt: serverTimestamp()
   });
   return docRef.id;
@@ -428,6 +436,11 @@ export const subscribeJourneys = (uid, onUpdate, onError) => {
 export const createJourney = async (uid, journeyData) => {
   if (!uid) throw new Error('User not authenticated');
   const journeysRef = collection(db, 'users', uid, 'journeys');
+
+  const now = new Date();
+  const startedAt = journeyData.startedAt || now.toISOString();
+  const startedEpoch = journeyData.startedEpoch ?? Date.parse(startedAt) ?? now.getTime();
+
   const docRef = await addDoc(journeysRef, {
     ownerUid: uid,
     title: journeyData.title || 'Untitled Journey',
@@ -437,12 +450,18 @@ export const createJourney = async (uid, journeyData) => {
     startLabel: journeyData.startLabel || 'Current Location',
     startLatitude: journeyData.startLatitude ?? null,
     startLongitude: journeyData.startLongitude ?? null,
-    startedAt: journeyData.startedAt || new Date().toISOString(),
+    startedAt,
+    startedEpoch,
     expectedArrivalAt: journeyData.expectedArrivalAt || null,
+    expectedArrivalEpoch: journeyData.expectedArrivalEpoch ?? (journeyData.expectedArrivalAt ? Date.parse(journeyData.expectedArrivalAt) : null),
+    expectedArrivalLabel: journeyData.expectedArrivalLabel || null,
     lastLatitude: journeyData.lastLatitude ?? journeyData.startLatitude ?? null,
     lastLongitude: journeyData.lastLongitude ?? journeyData.startLongitude ?? null,
-    lastLocationAt: new Date().toISOString(),
+    lastLocationAt: now.toISOString(),
+    lastLocationEpoch: now.getTime(),
     locationAccuracyMeters: journeyData.locationAccuracyMeters ?? null,
+    locationAccuracyCategory: journeyData.locationAccuracyCategory ?? 'unknown',
+    isStartLocationStale: journeyData.isStartLocationStale ?? false,
     status: journeyData.status || 'active', // 'planned' | 'active' | 'paused' | 'completed' | 'cancelled'
     selectedContactIds: journeyData.selectedContactIds || [],
     notes: journeyData.notes || '',
@@ -452,14 +471,35 @@ export const createJourney = async (uid, journeyData) => {
   return docRef.id;
 };
 
-export const updateJourneyLocation = async (uid, journeyId, locationData) => {
-  if (!uid || !journeyId) return;
+export const updateJourneyLocation = async (uid, journeyId, locationDataOrLat, maybeLon, maybeAcc) => {
+  if (!uid) return;
+
+  // Support both (uid, journeyId, { latitude, longitude, accuracy })
+  // and (uid, journeyId, lat, lon, acc)
+  let lat = null;
+  let lon = null;
+  let acc = null;
+
+  if (locationDataOrLat && typeof locationDataOrLat === 'object') {
+    lat = locationDataOrLat.latitude;
+    lon = locationDataOrLat.longitude;
+    acc = locationDataOrLat.accuracy ?? null;
+  } else if (typeof locationDataOrLat === 'number') {
+    lat = locationDataOrLat;
+    lon = maybeLon;
+    acc = maybeAcc ?? null;
+  }
+
+  if (lat == null || lon == null || !journeyId) return;
+
+  const now = new Date();
   const journeyRef = doc(db, 'users', uid, 'journeys', journeyId);
   await updateDoc(journeyRef, {
-    lastLatitude: locationData.latitude,
-    lastLongitude: locationData.longitude,
-    locationAccuracyMeters: locationData.accuracy ?? null,
-    lastLocationAt: new Date().toISOString(),
+    lastLatitude: lat,
+    lastLongitude: lon,
+    locationAccuracyMeters: acc,
+    lastLocationAt: now.toISOString(),
+    lastLocationEpoch: now.getTime(),
     updatedAt: serverTimestamp()
   });
 };
@@ -467,13 +507,18 @@ export const updateJourneyLocation = async (uid, journeyId, locationData) => {
 export const updateJourneyStatus = async (uid, journeyId, status, extraData = {}) => {
   if (!uid || !journeyId) return;
   const journeyRef = doc(db, 'users', uid, 'journeys', journeyId);
+  const now = new Date();
   const updatePayload = {
     status,
     updatedAt: serverTimestamp(),
     ...extraData
   };
   if (status === 'completed') {
-    updatePayload.completedAt = new Date().toISOString();
+    updatePayload.completedAt = now.toISOString();
+    updatePayload.completedEpoch = now.getTime();
+  } else if (status === 'cancelled') {
+    updatePayload.cancelledAt = now.toISOString();
+    updatePayload.cancelledEpoch = now.getTime();
   }
   await updateDoc(journeyRef, updatePayload);
 };

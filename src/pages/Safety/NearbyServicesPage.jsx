@@ -12,7 +12,8 @@ import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
-  Info
+  Info,
+  Crosshair
 } from 'lucide-react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
@@ -20,6 +21,7 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import { useSafety } from '../../context/SafetyContext';
+import { updateAccuracyCircleOnMap, removeAccuracyCircleFromMap } from '../../services/map/mapUtils';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY || 'BE8E5HFWGrNH05pGD0M4';
 const MAPTILER_STYLE = `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_API_KEY}`;
@@ -54,7 +56,7 @@ const CATEGORIES = [
 ];
 
 const NearbyServicesPage = () => {
-  const { currentLocation, refreshPermissions } = useSafety();
+  const { currentLocation, locationError, isLocating, getCurrentPosition, refreshPermissions } = useSafety();
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [radiusKm, setRadiusKm] = useState('5');
@@ -63,11 +65,14 @@ const NearbyServicesPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
+  const [mapError, setMapError] = useState(null);
 
   // Map state
   const mapContainerRef = useRef(null);
   const mapRef = useRef(null);
   const markersRef = useRef([]);
+  const userMarkerRef = useRef(null);
+  const isCenteredRef = useRef(false);
 
   // Fetch real OSM emergency facilities using Overpass API
   const fetchNearbyServices = async (lat, lon, radiusInKm) => {
@@ -140,7 +145,11 @@ const NearbyServicesPage = () => {
         else if (amenity === 'fire_station') category = 'fire';
 
         const name = tags.name || (category === 'police' ? 'Police Station' : category === 'hospital' ? 'Emergency Hospital / Clinic' : 'Fire Department');
-        const phone = tags.phone || tags['contact:phone'] || tags['emergency:phone'] || (category === 'police' ? '112' : category === 'hospital' ? '102' : '101');
+        const directPhone = tags.phone || tags['contact:phone'] || tags['emergency:phone'] || null;
+        const nationalHelpline = category === 'police' ? '112' : category === 'hospital' ? '102' : '101';
+        const phone = directPhone || nationalHelpline;
+        const isDirectPhone = Boolean(directPhone);
+
         const street = tags['addr:street'] ? `${tags['addr:housenumber'] || ''} ${tags['addr:street']}`.trim() : '';
         const city = tags['addr:city'] || tags['addr:suburb'] || tags['addr:district'] || '';
         const address = [street, city].filter(Boolean).join(', ') || 'Local Emergency Division';
@@ -155,6 +164,7 @@ const NearbyServicesPage = () => {
           longitude: itemLon,
           distanceKm: distKm,
           phone,
+          isDirectPhone,
           address,
           operator: tags.operator || tags['operator:type'] || ''
         };
@@ -178,34 +188,72 @@ const NearbyServicesPage = () => {
   useEffect(() => {
     if (!mapContainerRef.current) return;
 
-    const initialLng = currentLocation?.longitude || 72.8777;
-    const initialLat = currentLocation?.latitude || 19.0760;
+    const initialLng = currentLocation?.longitude || 78.9629;
+    const initialLat = currentLocation?.latitude || 20.5937;
+    const initialZoom = currentLocation ? 13 : 4;
 
     if (!mapRef.current) {
       const map = new maplibregl.Map({
         container: mapContainerRef.current,
         style: MAPTILER_STYLE,
-        center: [initialLng, initialLat], // [lng, lat]
-        zoom: 13
+        center: [initialLng, initialLat],
+        zoom: initialZoom
       });
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
-      // User location marker
-      const userEl = document.createElement('div');
-      userEl.style.width = '18px';
-      userEl.style.height = '18px';
-      userEl.style.borderRadius = '50%';
-      userEl.style.backgroundColor = '#5B214F';
-      userEl.style.border = '3px solid #FFFFFF';
-      userEl.style.boxShadow = '0 0 10px rgba(91, 33, 79, 0.5)';
-
-      new maplibregl.Marker({ element: userEl })
-        .setLngLat([initialLng, initialLat])
-        .setPopup(new maplibregl.Popup({ offset: 10 }).setHTML('<strong>Your Location</strong>'))
-        .addTo(map);
+      map.on('error', (e) => {
+        if (e.error?.message?.includes('403')) {
+          setMapError('MapTiler API key is invalid or expired.');
+        } else if (e.error) {
+          setMapError('Map tiles could not be loaded. Check your network.');
+        }
+      });
 
       mapRef.current = map;
+    }
+
+    // Place or update user position marker & accuracy circle ONLY when genuine GPS coordinates exist
+    if (mapRef.current && currentLocation?.latitude && currentLocation?.longitude) {
+      const uLng = currentLocation.longitude;
+      const uLat = currentLocation.latitude;
+
+      if (!userMarkerRef.current) {
+        const userEl = document.createElement('div');
+        userEl.style.width = '20px';
+        userEl.style.height = '20px';
+        userEl.style.borderRadius = '50%';
+        userEl.style.backgroundColor = '#5B214F';
+        userEl.style.border = '3px solid #FFFFFF';
+        userEl.style.boxShadow = '0 0 12px rgba(91, 33, 79, 0.6)';
+
+        const popupText = `<strong>Your Location</strong><br/><span style="font-size:11px; color:#666;">Accuracy: ±${Math.round(currentLocation.accuracy || 0)}m${currentLocation.isStale ? ' (Stale)' : ''}</span>`;
+
+        userMarkerRef.current = new maplibregl.Marker({ element: userEl })
+          .setLngLat([uLng, uLat])
+          .setPopup(new maplibregl.Popup({ offset: 10 }).setHTML(popupText))
+          .addTo(mapRef.current);
+      } else {
+        userMarkerRef.current.setLngLat([uLng, uLat]);
+      }
+
+      // Geodesic accuracy circle
+      if (currentLocation.accuracy != null) {
+        updateAccuracyCircleOnMap(
+          mapRef.current,
+          'nearby-user-accuracy',
+          uLng,
+          uLat,
+          currentLocation.accuracy,
+          { fillColor: '#5B214F', lineColor: '#5B214F', fillOpacity: 0.12, lineOpacity: 0.45 }
+        );
+      }
+
+      // Fly to user coordinates on first real GPS fix
+      if (!isCenteredRef.current) {
+        mapRef.current.flyTo({ center: [uLng, uLat], zoom: 13, speed: 1.4 });
+        isCenteredRef.current = true;
+      }
     }
 
     // Clear existing service markers
@@ -235,7 +283,7 @@ const NearbyServicesPage = () => {
         <div style="font-family: sans-serif; padding: 4px;">
           <strong style="color: #5B214F; font-size: 13px;">${s.name}</strong><br/>
           <span style="font-size: 11px; color: #666;">${s.address}</span><br/>
-          <span style="font-size: 11px; font-weight: bold; color: #C75B7A;">${s.distanceKm.toFixed(2)} km away</span><br/>
+          <span style="font-size: 11px; font-weight: bold; color: #C75B7A;">${s.distanceKm.toFixed(2)} km (straight-line)</span><br/>
           <a href="https://www.google.com/maps/dir/?api=1&destination=${s.latitude},${s.longitude}" target="_blank" style="font-size: 11px; color: #5B214F; font-weight: bold; text-decoration: underline;">Get Directions ↗</a>
         </div>
       `;
@@ -249,10 +297,24 @@ const NearbyServicesPage = () => {
     });
   }, [services, activeCategory, searchQuery, currentLocation]);
 
+  // Recenter handler
+  const handleRecenter = () => {
+    if (mapRef.current && currentLocation?.latitude && currentLocation?.longitude) {
+      mapRef.current.flyTo({ center: [currentLocation.longitude, currentLocation.latitude], zoom: 14, essential: true });
+    } else {
+      refreshPermissions();
+    }
+  };
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (mapRef.current) {
+        removeAccuracyCircleFromMap(mapRef.current, 'nearby-user-accuracy');
+        userMarkerRef.current?.remove();
+        userMarkerRef.current = null;
+        markersRef.current.forEach((m) => m.remove());
+        markersRef.current = [];
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -400,15 +462,74 @@ const NearbyServicesPage = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '1.5rem' }}>
         {/* Map View */}
         <div style={{ gridColumn: 'span 12 / span 7' }}>
-          <Card padding="none" style={{ overflow: 'hidden', height: '580px', position: 'relative', border: '1px solid rgba(246, 221, 229, 0.8)' }}>
+          <Card padding="none" style={{ overflow: 'hidden', height: '580px', position: 'relative', border: '1px solid rgba(246, 221, 229, 0.8)', backgroundColor: '#EDE7EC' }}>
             <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
+
+            {/* Recenter Button */}
+            <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', zIndex: 5 }}>
+              <button
+                onClick={handleRecenter}
+                title="Recenter map on your location"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.4rem',
+                  padding: '0.45rem 0.85rem', borderRadius: '8px',
+                  background: 'rgba(255,255,255,0.95)', border: '1px solid rgba(91,33,79,0.2)',
+                  fontWeight: 700, fontSize: '0.8rem', color: 'var(--color-primary)',
+                  cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                }}
+              >
+                <Crosshair size={14} /> Recenter
+              </button>
+            </div>
+
+            {/* Map Error Overlay */}
+            {mapError && (
+              <div style={{
+                position: 'absolute', top: '0.75rem', left: '0.75rem', right: '0.75rem', zIndex: 10,
+                background: 'rgba(255,255,255,0.97)', padding: '0.65rem 0.95rem', borderRadius: '8px',
+                border: '1px solid var(--color-emergency)', display: 'flex', alignItems: 'center', gap: '0.5rem'
+              }}>
+                <AlertCircle size={16} color="var(--color-emergency)" />
+                <span style={{ fontSize: '0.85rem', color: 'var(--color-emergency)', fontWeight: 600 }}>{mapError}</span>
+              </div>
+            )}
+
+            {/* Location acquiring indicator */}
+            {!currentLocation && !mapError && (
+              <div style={{
+                position: 'absolute', bottom: '1rem', left: '1rem', zIndex: 5,
+                background: 'rgba(255,255,255,0.94)', borderRadius: '8px',
+                padding: '0.4rem 0.75rem', fontSize: '0.8rem', fontWeight: 600,
+                color: 'var(--color-primary)', boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                📡 Waiting for verified GPS coordinates...
+              </div>
+            )}
           </Card>
         </div>
 
         {/* Results List */}
         <div style={{ gridColumn: 'span 12 / span 5' }}>
           <div style={{ maxHeight: '580px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-            {loading ? (
+            {!currentLocation ? (
+              <Card padding="lg" style={{ textAlign: 'center', padding: '3rem 1.5rem', border: '1px solid rgba(246, 221, 229, 0.9)' }}>
+                <MapPin size={36} color="var(--color-secondary)" style={{ margin: '0 auto 0.75rem auto' }} />
+                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.5rem' }}>
+                  Live Location Required
+                </h4>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-muted)', marginBottom: '1.25rem', lineHeight: 1.5 }}>
+                  {locationError || 'SecureHer needs your verified GPS coordinates to find nearest police stations, hospitals, and emergency services.'}
+                </p>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  icon={RefreshCw}
+                  onClick={() => refreshPermissions()}
+                >
+                  Enable Location & Search
+                </Button>
+              </Card>
+            ) : loading ? (
               <Card padding="lg" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
                 <div style={{ fontSize: '0.95rem', color: 'var(--color-text-muted)' }}>
                   Searching OpenStreetMap for nearby emergency facilities...
@@ -464,13 +585,13 @@ const NearbyServicesPage = () => {
                     📍 {service.address}
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem', marginBottom: '0.85rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.825rem', marginBottom: '0.85rem', flexWrap: 'wrap', gap: '0.35rem' }}>
                     <span style={{ fontWeight: 700, color: 'var(--color-secondary)' }}>
-                      {service.distanceKm.toFixed(2)} km away
+                      {service.distanceKm.toFixed(2)} km (straight-line)
                     </span>
                     {service.phone && (
                       <span style={{ color: 'var(--color-primary)', fontWeight: 600 }}>
-                        📞 {service.phone}
+                        {service.isDirectPhone ? `📞 Direct: ${service.phone}` : `🚨 Helpline: ${service.phone} (National)`}
                       </span>
                     )}
                   </div>
