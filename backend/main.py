@@ -3,7 +3,7 @@ import sys
 import logging
 import re
 from typing import Optional, Dict, Any, List
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import FastAPI, HTTPException, Header, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -129,7 +129,7 @@ def health_check():
         "brevoConfigured": brevo_configured,
         "senderConfigured": bool(BREVO_SENDER_EMAIL),
         "geminiConfigured": gemini_configured,
-        "timestamp": datetime.utcnow().isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
 @app.post("/api/sos")
@@ -307,7 +307,7 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
                 "recipients": recipient_emails,
                 "recipient": recipient_emails[0],
                 "message": f"Emergency alert accepted by email provider for {recipient_display}.",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         else:
             brevo_error = response.text[:500] if response.text else "(empty response)"
