@@ -104,8 +104,8 @@ const DashboardPage = () => {
           </h3>
           <p style={{ color: 'var(--color-text-muted)', fontSize: '0.925rem', margin: 0 }}>
             {emergencyContacts.length > 0
-              ? `Connected to ${emergencyContacts.length} trusted emergency contact(s) with live GPS dispatch via Brevo.`
-              : 'No emergency contacts configured yet. Add contacts to enable instant email dispatches.'}
+              ? `Connected to ${emergencyContacts.length} trusted emergency contact(s) with live GPS dispatch via cellular SMS and push alerts.`
+              : 'No emergency contacts configured yet. Add contacts to enable instant emergency alerts.'}
           </p>
         </div>
         <Link to="/safety/sos" style={{ textDecoration: 'none' }}>

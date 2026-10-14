@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, AlertTriangle, MapPin, PhoneCall, CheckCircle2, Radio, Volume2, VolumeX, Mail, ExternalLink, AlertCircle } from 'lucide-react';
+import { Shield, AlertTriangle, MapPin, PhoneCall, CheckCircle2, Radio, Volume2, VolumeX, MessageSquare, Bell, ExternalLink, AlertCircle } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
@@ -12,7 +12,7 @@ const SOSPage = () => {
   const {
     emergencyContacts,
     primaryEmergencyContact,
-    validEmailContacts,
+    validPhoneContacts,
     currentLocation,
     getCurrentPosition,
     sosActive,
@@ -250,7 +250,7 @@ const SOSPage = () => {
             {!primaryEmergencyContact && (
               <div style={{ marginTop: '1.25rem', padding: '0.75rem 1rem', backgroundColor: 'rgba(217, 45, 58, 0.08)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span style={{ fontSize: '0.85rem', color: 'var(--color-emergency)', fontWeight: 600 }}>
-                  ⚠️ No emergency contact configured. Add an email to receive automatic SOS dispatches.
+                  ⚠️ No emergency contact configured. Add a mobile phone number to receive automatic SOS alerts.
                 </span>
                 <Link to="/safety/contacts">
                   <Button variant="outline" size="sm">
@@ -345,30 +345,78 @@ const SOSPage = () => {
                 )}
               </div>
 
-              {/* Email Provider Status */}
+              {/* Native SMS Status */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)' }}>
-                  <Mail size={18} color="var(--color-primary)" /> <strong>Emergency Dispatch:</strong>
+                  <MessageSquare size={18} color="var(--color-secondary)" /> <strong>Cellular SMS:</strong>
                 </span>
-                {sosStatus.emailStatus === 'provider_accepted' || sosStatus.emailSent ? (
+                {sosStatus.smsStatus === 'dispatched_to_carrier' ? (
                   <div style={{ textAlign: 'right' }}>
                     <span style={{ color: '#2E7D32', fontWeight: 700 }}>
-                      Dispatched (Accepted by Provider) ✓
+                      Handed to Cellular Carrier Radio ✓
                     </span>
                     <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-                      To: {sosStatus.recipients?.join(', ') || primaryEmergencyContact?.email}
-                      {sosStatus.messageId && ` • ID: ${sosStatus.messageId.slice(0, 16)}...`}
+                      To: {sosStatus.smsRecipient || primaryEmergencyContact?.phone} (Direct Android SMS)
                     </div>
                   </div>
-                ) : sosStatus.emailStatus === 'unreachable' ? (
-                  <span style={{ color: 'var(--color-emergency)', fontWeight: 700 }}>
-                    Backend Unreachable ✗ (Call 112 directly)
+                ) : sosStatus.smsStatus === 'unsupported_platform' ? (
+                  <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                    <span style={{ color: '#B26A00', fontWeight: 600, fontSize: '0.85rem' }}>
+                      Web Browser (Direct SMS Unsupported)
+                    </span>
+                    {sosStatus.smsFallbackUri && (
+                      <a
+                        href={sosStatus.smsFallbackUri}
+                        style={{
+                          backgroundColor: 'var(--color-secondary)',
+                          color: '#FFFFFF',
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: 'var(--radius-sm)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          textDecoration: 'none'
+                        }}
+                      >
+                        ✉️ Open SMS App Composer
+                      </a>
+                    )}
+                  </div>
+                ) : sosStatus.smsStatus === 'permission_denied' ? (
+                  <span style={{ color: 'var(--color-emergency)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    SMS Permission Denied (Enable in Android Settings)
+                  </span>
+                ) : sosStatus.smsStatus === 'no_sim' ? (
+                  <span style={{ color: 'var(--color-emergency)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    No Active SIM Card Detected
                   </span>
                 ) : (
-                  <span style={{ color: 'var(--color-emergency)', fontWeight: 600 }}>
-                    {primaryEmergencyContact
-                      ? `Dispatch Failed ✗ (${primaryEmergencyContact.email})`
-                      : 'No contact email configured'}
+                  <span style={{ color: 'var(--color-emergency)', fontWeight: 600, fontSize: '0.85rem' }}>
+                    {primaryEmergencyContact ? `SMS Failed (${primaryEmergencyContact.phone})` : 'No phone number configured'}
+                  </span>
+                )}
+              </div>
+
+              {/* FCM Push Notification Status */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)' }}>
+                  <Bell size={18} color="var(--color-primary)" /> <strong>Trusted Push Alert:</strong>
+                </span>
+                {sosStatus.pushDispatched ? (
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ color: '#2E7D32', fontWeight: 700 }}>
+                      Dispatched to {sosStatus.pushSentCount} device(s) ✓
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      Firebase Cloud Messaging
+                    </div>
+                  </div>
+                ) : sosStatus.pushStatus === 'no_registered_devices' ? (
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                    No trusted contact devices registered yet
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem' }}>
+                    {sosStatus.pushStatus === 'idle' ? 'Pending push dispatch...' : 'Push alert unavailable'}
                   </span>
                 )}
               </div>

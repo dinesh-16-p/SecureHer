@@ -1,6 +1,6 @@
 /**
  * Safety API Client
- * Interfaces with the SecureHer FastAPI Backend for SOS alert verification & Brevo email delivery
+ * Interfaces with the SecureHer FastAPI Backend for SOS push notification dispatch and journey progress
  */
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -27,16 +27,19 @@ export const checkBackendHealth = async () => {
   }
 };
 
-export const sendSOSAlert = async ({
+/**
+ * Dispatch Firebase Cloud Messaging (FCM) push notifications to trusted emergency contacts
+ */
+export const sendSOSPushAlert = async ({
   token,
   latitude,
   longitude,
   accuracy,
-  recipientEmail,
-  recipientName,
-  recipients,
+  recipientUids,
+  recipientTokens,
   userName,
-  userPhone
+  userPhone,
+  eventId
 }) => {
   try {
     const controller = new AbortController();
@@ -54,15 +57,15 @@ export const sendSOSAlert = async ({
       latitude: latitude ?? null,
       longitude: longitude ?? null,
       accuracy: accuracy ?? null,
-      recipientEmail: recipientEmail || null,
-      recipientName: recipientName || null,
-      recipients: Array.isArray(recipients) && recipients.length > 0 ? recipients : undefined,
+      recipientUids: Array.isArray(recipientUids) ? recipientUids : [],
+      recipientTokens: Array.isArray(recipientTokens) ? recipientTokens : [],
       userName: userName || 'SecureHer User',
       userPhone: userPhone || '',
+      eventId: eventId || null,
       timestamp: new Date().toISOString()
     };
 
-    const response = await fetch(`${API_BASE_URL}/api/sos`, {
+    const response = await fetch(`${API_BASE_URL}/api/sos/push`, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
@@ -72,18 +75,17 @@ export const sendSOSAlert = async ({
 
     const result = await response.json().catch(() => ({}));
 
-    // Provider accepted or sent status from Brevo dispatch
-    if (response.ok && result.success && (result.emailStatus === 'provider_accepted' || result.emailStatus === 'sent')) {
+    if (response.ok && result.success) {
       return {
         success: true,
+        channel: 'fcm',
         backendAvailable: true,
-        emailSent: true, // indicates dispatched and accepted by provider
-        emailStatus: result.emailStatus || 'provider_accepted',
-        providerStatus: result.providerStatus || 'accepted',
+        pushStatus: result.pushStatus || 'dispatched',
+        sentCount: result.sentCount || 0,
+        failedCount: result.failedCount || 0,
+        unregisteredCount: result.unregisteredCount || 0,
         locationStatus: result.locationStatus || (latitude ? 'available' : 'unavailable'),
-        messageId: result.messageId,
-        recipients: result.recipients || (recipientEmail ? [recipientEmail] : []),
-        message: result.message || `Emergency alert accepted by email provider for ${recipientEmail}`,
+        message: result.message || `Push notification dispatched to ${result.sentCount || 0} trusted device(s).`,
         data: result
       };
     } else {
@@ -94,16 +96,17 @@ export const sendSOSAlert = async ({
         (response.status === 401
           ? 'Authentication token invalid or expired'
           : response.status === 400
-          ? 'Invalid SOS parameters or missing recipient'
-          : 'Emergency alert dispatch could not be processed.');
+          ? 'Invalid SOS parameters or missing recipient device tokens'
+          : 'Emergency push notification dispatch could not be processed.');
       return {
         success: false,
+        channel: 'fcm',
         backendAvailable: true,
-        emailSent: false,
-        emailStatus: result.emailStatus || 'failed',
-        providerStatus: result.providerStatus || 'rejected',
+        pushStatus: result.pushStatus || 'failed',
+        sentCount: 0,
+        failedCount: result.failedCount || 0,
+        unregisteredCount: result.unregisteredCount || 0,
         locationStatus: latitude ? 'available' : 'unavailable',
-        recipients: result.recipients || (recipientEmail ? [recipientEmail] : []),
         message: errorDetail,
         error: errorDetail,
         statusCode: response.status,
@@ -113,12 +116,12 @@ export const sendSOSAlert = async ({
   } catch (err) {
     return {
       success: false,
+      channel: 'fcm',
       backendAvailable: false,
-      emailSent: false,
-      emailStatus: 'unreachable',
-      providerStatus: 'unreachable',
+      pushStatus: 'unreachable',
+      sentCount: 0,
       locationStatus: latitude ? 'available' : 'unavailable',
-      message: 'FastAPI backend service is currently unreachable. Please contact your emergency contact directly or call 112.',
+      message: 'FastAPI backend service is currently unreachable for push notifications. Direct SMS or helpline is recommended.',
       error: err.message
     };
   }
@@ -184,7 +187,7 @@ export const shareJourneyProgress = async ({
       success: false,
       emailStatus: result.emailStatus || 'failed',
       recipient: recipientEmail,
-      message: result.detail || result.message || 'Could not send journey email update.'
+      message: result.detail || result.message || 'Could not send journey update.'
     };
   } catch (err) {
     return {
@@ -195,4 +198,3 @@ export const shareJourneyProgress = async ({
     };
   }
 };
-

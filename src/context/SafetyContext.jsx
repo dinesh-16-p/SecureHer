@@ -19,7 +19,14 @@ import {
   checkAllPermissions
 } from '../services/permissionService';
 import { sosAlarm } from '../services/audio/sosAlarm';
-import { sendSOSAlert, checkBackendHealth } from '../services/api/safetyApi';
+import { sendSOSPushAlert, checkBackendHealth } from '../services/api/safetyApi';
+import {
+  dispatchEmergencySms,
+  isNativeSmsSupported,
+  openSmsComposerFallback,
+  isValidPhoneNumber
+} from '../services/sms/smsService';
+import { registerDeviceForPush } from '../services/firebase/fcmService';
 
 const SafetyContext = createContext();
 
@@ -63,11 +70,14 @@ export const SafetyProvider = ({ children }) => {
     isLocationStale: false,
     accuracyCategory: 'unknown',
     eventCreated: false,
-    emailSent: false,
-    emailStatus: 'idle', // 'idle' | 'sending' | 'provider_accepted' | 'failed' | 'unreachable'
-    providerStatus: null,
-    messageId: null,
-    recipients: [],
+    smsDispatched: false,
+    smsStatus: 'idle', // 'idle' | 'dispatched_to_carrier' | 'permission_denied' | 'no_sim' | 'unsupported_platform' | 'failed'
+    smsRecipient: null,
+    smsPlatform: null,
+    smsFallbackUri: null,
+    pushDispatched: false,
+    pushStatus: 'idle', // 'idle' | 'dispatched' | 'no_registered_devices' | 'failed'
+    pushSentCount: 0,
     backendAvailable: null,
     message: '',
     timestamp: null
@@ -111,20 +121,18 @@ export const SafetyProvider = ({ children }) => {
     refreshPermissions();
   }, [refreshPermissions]);
 
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  // Primary emergency contact (priority #1 configured isPrimary with valid email, #2 any contact with valid email, #3 isPrimary phone only, #4 first contact)
+  // Primary emergency contact (priority #1 configured isPrimary with valid phone, #2 any contact with valid phone, #3 isPrimary, #4 first contact)
   const primaryEmergencyContact = useMemo(() => {
     if (!emergencyContacts || emergencyContacts.length === 0) return null;
-    const primaryWithEmail = emergencyContacts.find(
-      (c) => c.isPrimary && c.email && EMAIL_REGEX.test(c.email.trim())
+    const primaryWithPhone = emergencyContacts.find(
+      (c) => c.isPrimary && c.phone && isValidPhoneNumber(c.phone.trim())
     );
-    if (primaryWithEmail) return primaryWithEmail;
+    if (primaryWithPhone) return primaryWithPhone;
 
-    const anyWithEmail = emergencyContacts.find(
-      (c) => c.email && EMAIL_REGEX.test(c.email.trim())
+    const anyWithPhone = emergencyContacts.find(
+      (c) => c.phone && isValidPhoneNumber(c.phone.trim())
     );
-    if (anyWithEmail) return anyWithEmail;
+    if (anyWithPhone) return anyWithPhone;
 
     const primaryOnly = emergencyContacts.find((c) => c.isPrimary);
     if (primaryOnly) return primaryOnly;
@@ -132,14 +140,16 @@ export const SafetyProvider = ({ children }) => {
     return emergencyContacts[0];
   }, [emergencyContacts]);
 
-  // All configured contacts that have a valid email address
-  const validEmailContacts = useMemo(() => {
+  // All configured contacts that have a valid phone number
+  const validPhoneContacts = useMemo(() => {
     if (!emergencyContacts || emergencyContacts.length === 0) return [];
     return emergencyContacts
-      .filter((c) => c.email && EMAIL_REGEX.test(c.email.trim()))
+      .filter((c) => c.phone && isValidPhoneNumber(c.phone.trim()))
       .map((c) => ({
-        email: c.email.trim(),
-        name: c.name?.trim() || 'Emergency Contact'
+        id: c.id,
+        phone: c.phone.trim(),
+        name: c.name?.trim() || 'Emergency Contact',
+        isPrimary: !!c.isPrimary
       }));
   }, [emergencyContacts]);
 
@@ -319,9 +329,10 @@ export const SafetyProvider = ({ children }) => {
 
       // 3. Log Safety Event in Firestore under users/{uid}/safetyEvents
       let createdEventId = null;
-      const recipient = primaryEmergencyContact?.email || null;
-      const recipientName = primaryEmergencyContact?.name || null;
-      const allRecipientEmails = validEmailContacts.map((c) => c.email);
+      const primaryPhone = primaryEmergencyContact?.phone || null;
+      const primaryName = primaryEmergencyContact?.name || null;
+      const recipientPhones = validPhoneContacts.map((c) => c.phone);
+      const recipientUids = validPhoneContacts.map((c) => c.id);
 
       if (user) {
         try {
@@ -335,9 +346,10 @@ export const SafetyProvider = ({ children }) => {
             locationStatus,
             locationTimestamp: targetLoc?.timestamp ?? null,
             isLocationStale: targetLoc?.isStale ?? false,
-            recipientEmail: recipient,
-            recipients: allRecipientEmails,
-            emailStatus: 'sending'
+            recipientPhone: primaryPhone,
+            recipients: recipientPhones,
+            smsStatus: 'dispatching',
+            pushStatus: 'dispatching'
           });
           setSosEventId(createdEventId);
         } catch (eventErr) {
@@ -345,57 +357,118 @@ export const SafetyProvider = ({ children }) => {
         }
       }
 
-      // 4. Send request to FastAPI backend (Brevo email dispatch)
+      const userName = userProfile?.fullName || user?.displayName || 'SecureHer User';
+
+      // 4. Channel 1: Native Android Direct SMS Dispatch (with Web/PWA transparent fallback)
+      let smsResult = {
+        success: false,
+        status: 'no_contact',
+        message: 'No emergency contact phone number configured.'
+      };
+
+      if (primaryPhone) {
+        try {
+          smsResult = await dispatchEmergencySms({
+            recipientPhone: primaryPhone,
+            userName,
+            latitude: targetLoc?.latitude ?? null,
+            longitude: targetLoc?.longitude ?? null,
+            accuracy: targetLoc?.accuracy ?? null,
+            isStale: targetLoc?.isStale ?? false
+          });
+        } catch (smsErr) {
+          console.error('SMS dispatch error:', smsErr);
+          smsResult = {
+            success: false,
+            status: 'failed',
+            error: smsErr.message,
+            message: `SMS dispatch failed: ${smsErr.message}`
+          };
+        }
+      }
+
+      // 5. Channel 2: Firebase Cloud Messaging (FCM) Push Notification Dispatch via FastAPI Backend
+      let pushResult = {
+        success: false,
+        pushStatus: 'skipped',
+        sentCount: 0,
+        message: 'Push alert skipped.'
+      };
+
       let idToken = null;
       if (user && typeof user.getIdToken === 'function') {
         try {
           idToken = await user.getIdToken();
         } catch (tokErr) {
-          console.warn('Could not retrieve Firebase ID token:', tokErr);
+          console.warn('Could not retrieve Firebase ID token for push:', tokErr);
         }
       }
 
-      const apiResult = await sendSOSAlert({
-        token: idToken,
-        latitude: targetLoc?.latitude ?? null,
-        longitude: targetLoc?.longitude ?? null,
-        accuracy: targetLoc?.accuracy ?? null,
-        recipientEmail: recipient,
-        recipientName: recipientName,
-        recipients: validEmailContacts,
-        userName: userProfile?.fullName || user?.displayName || 'SecureHer User',
-        userPhone: userProfile?.phone || ''
-      });
+      try {
+        pushResult = await sendSOSPushAlert({
+          token: idToken,
+          latitude: targetLoc?.latitude ?? null,
+          longitude: targetLoc?.longitude ?? null,
+          accuracy: targetLoc?.accuracy ?? null,
+          recipientUids,
+          userName,
+          userPhone: userProfile?.phone || '',
+          eventId: createdEventId
+        });
+      } catch (pushErr) {
+        console.warn('Push alert exception:', pushErr);
+        pushResult = {
+          success: false,
+          pushStatus: 'failed',
+          message: pushErr.message
+        };
+      }
 
-      // 5. Update Firestore event with backend dispatch result
+      // 6. Update Firestore event with SMS and Push outcomes
       if (user && createdEventId) {
         try {
           await updateSafetyEvent(user.uid, createdEventId, {
-            emailStatus: apiResult.emailStatus, // 'provider_accepted' | 'failed' | 'unreachable'
-            providerStatus: apiResult.providerStatus,
-            messageId: apiResult.messageId || null,
-            backendMessage: apiResult.message
+            smsStatus: smsResult.status || 'failed',
+            smsRecipient: primaryPhone,
+            smsPlatform: smsResult.platform || (isNativeSmsSupported() ? 'android' : 'web'),
+            pushStatus: pushResult.pushStatus || 'failed',
+            pushSentCount: pushResult.sentCount || 0,
+            backendMessage: pushResult.message || null
           });
         } catch (updErr) {
           console.warn('Failed to update safety event in Firestore:', updErr);
         }
       }
 
-      // 6. Build transparent human-readable status message
-      let statusSummary = apiResult.message;
-      if (targetLoc) {
-        if (targetLoc.isStale) {
-          statusSummary += ` (Dispatched with last-known coordinates, stale by ${targetLoc.ageSec || Math.round(targetLoc.ageMs / 1000)}s)`;
-        } else if (targetLoc.isRecent) {
-          statusSummary += ` (Dispatched with recent GPS from ${targetLoc.ageSec}s ago, ±${Math.round(targetLoc.accuracy)}m)`;
-        } else {
-          statusSummary += ` (Live GPS accurate to ±${Math.round(targetLoc.accuracy)}m)`;
-        }
+      // 7. Build transparent human-readable status message
+      let statusSummary = '';
+      if (smsResult.status === 'dispatched_to_carrier') {
+        statusSummary = `Direct cellular SMS sent to ${primaryPhone}`;
+      } else if (smsResult.status === 'unsupported_platform') {
+        statusSummary = 'Web browser cannot send background SMS directly. Use SMS app link or call 112';
+      } else if (smsResult.status === 'permission_denied') {
+        statusSummary = 'SMS permission denied by user. Enable in Android Settings';
+      } else if (smsResult.status === 'no_sim') {
+        statusSummary = 'No active SIM card detected for direct cellular SMS';
       } else {
-        statusSummary += ' (Alert sent without coordinates: GPS unavailable)';
+        statusSummary = smsResult.message || 'Emergency trigger processed';
       }
 
-      // 7. Update UI Status State
+      if (pushResult.success && pushResult.sentCount > 0) {
+        statusSummary += ` • Push alert sent to ${pushResult.sentCount} device(s)`;
+      }
+
+      if (targetLoc) {
+        if (targetLoc.isStale) {
+          statusSummary += ` • Stale GPS (${targetLoc.ageSec || Math.round(targetLoc.ageMs / 1000)}s)`;
+        } else {
+          statusSummary += ` • GPS ±${Math.round(targetLoc.accuracy)}m`;
+        }
+      } else {
+        statusSummary += ' • Coordinates unavailable';
+      }
+
+      // 8. Update UI Status State
       setSosStatus({
         alarmPlaying: isAlarmPlaying,
         alarmAutoplayBlocked: isAutoplayBlocked,
@@ -404,21 +477,28 @@ export const SafetyProvider = ({ children }) => {
         isLocationStale: targetLoc?.isStale ?? false,
         accuracyCategory: targetLoc?.accuracyCategory ?? 'unknown',
         eventCreated: !!createdEventId,
-        emailSent: apiResult.emailSent,
-        emailStatus: apiResult.emailStatus,
-        providerStatus: apiResult.providerStatus,
-        messageId: apiResult.messageId || null,
-        recipients: apiResult.recipients || (recipient ? [recipient] : []),
-        backendAvailable: apiResult.backendAvailable,
+        smsDispatched: smsResult.status === 'dispatched_to_carrier',
+        smsStatus: smsResult.status,
+        smsRecipient: primaryPhone,
+        smsPlatform: smsResult.platform || (isNativeSmsSupported() ? 'android' : 'web'),
+        smsFallbackUri: smsResult.smsUri || null,
+        pushDispatched: pushResult.success && pushResult.sentCount > 0,
+        pushStatus: pushResult.pushStatus,
+        pushSentCount: pushResult.sentCount || 0,
+        backendAvailable: pushResult.backendAvailable,
         message: statusSummary,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
 
-      return apiResult;
+      return {
+        sms: smsResult,
+        push: pushResult,
+        location: targetLoc
+      };
     } finally {
       isSosInFlightRef.current = false;
     }
-  }, [currentLocation, user, userProfile, primaryEmergencyContact, validEmailContacts]);
+  }, [currentLocation, user, userProfile, primaryEmergencyContact, validPhoneContacts]);
 
   // Cancel SOS
   const cancelSOS = useCallback(async () => {

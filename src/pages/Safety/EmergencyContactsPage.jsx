@@ -103,12 +103,11 @@ const EmergencyContactsPage = () => {
 
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 700, color: 'var(--color-primary)', marginBottom: '0.25rem' }}>
-                Emergency Email (for SOS) *
+                Contact Email (Optional)
               </label>
               <input
                 type="email"
                 placeholder="e.g. contact@gmail.com"
-                required
                 value={newContact.email}
                 onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
                 style={{ width: '100%', padding: '0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(246, 221, 229, 0.9)', outline: 'none' }}

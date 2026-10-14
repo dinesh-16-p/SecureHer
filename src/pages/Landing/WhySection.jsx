@@ -26,7 +26,7 @@ const WhySection = () => {
     {
       icon: BellRing,
       title: 'Instant 1-Tap SOS Dispatch',
-      description: 'Hold the emergency SOS button for 3 seconds to broadcast live GPS coordinates via verified Brevo email dispatchers.',
+      description: 'Hold the emergency SOS button for 3 seconds to broadcast live GPS coordinates via direct native SMS and instant push alerts.',
       color: 'var(--color-emergency)'
     }
   ];

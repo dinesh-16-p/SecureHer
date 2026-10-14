@@ -591,3 +591,43 @@ export const deleteIncidentReport = async (uid, reportId) => {
   await deleteDoc(reportRef);
 };
 
+// ----------------------------------------------------------------------
+// 12. FCM DEVICE TOKENS (users/{uid}/devices)
+// ----------------------------------------------------------------------
+
+export const registerUserDeviceToken = async (uid, tokenData) => {
+  if (!uid || !tokenData?.token) return null;
+  const tokenDocId = tokenData.token.slice(-20).replace(/[^a-zA-Z0-9]/g, '_');
+  const deviceRef = doc(db, 'users', uid, 'devices', tokenDocId);
+  await setDoc(
+    deviceRef,
+    {
+      token: tokenData.token,
+      platform: tokenData.platform || 'web',
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      lastSeen: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    },
+    { merge: true }
+  );
+  return tokenDocId;
+};
+
+export const getUserDeviceTokens = async (uid) => {
+  if (!uid) return [];
+  try {
+    const devicesRef = collection(db, 'users', uid, 'devices');
+    const snap = await getDocs(devicesRef);
+    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.warn(`Could not fetch device tokens for user ${uid}:`, err);
+    return [];
+  }
+};
+
+export const deleteUserDeviceToken = async (uid, tokenDocId) => {
+  if (!uid || !tokenDocId) return;
+  const deviceRef = doc(db, 'users', uid, 'devices', tokenDocId);
+  await deleteDoc(deviceRef);
+};
+

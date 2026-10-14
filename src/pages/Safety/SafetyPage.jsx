@@ -24,7 +24,7 @@ const SafetyPage = () => {
       path: '/safety/sos',
       icon: AlertTriangle,
       color: 'var(--color-emergency)',
-      desc: '1-tap instant trigger with alarm and live GPS dispatch via verified Brevo transactional emails.'
+      desc: '1-tap instant trigger with siren alarm, direct native cellular SMS, and real-time push alerts.'
     },
     {
       title: 'Trusted Journey Tracking',

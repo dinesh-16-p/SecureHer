@@ -30,7 +30,7 @@ const HowItWorksSection = () => {
       num: '04',
       icon: Bell,
       title: 'Instant SOS & Response',
-      subtitle: 'Verified Brevo email dispatches',
+      subtitle: 'Direct SMS & Push alerts',
       desc: 'Activate Emergency SOS with a 3-second hold to dispatch live GPS coordinates and access verified nearby police/hospitals.'
     }
   ];

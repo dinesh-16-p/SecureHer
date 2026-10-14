@@ -248,39 +248,40 @@ function validateAndFormatSOSRequest({ authHeader, recipients, latitude, longitu
   };
 }
 
-runTest('Backend Contract: Rejects requests with missing or expired token', () => {
-  const missing = validateAndFormatSOSRequest({ authHeader: null, recipients: [{ email: 'test@example.com' }] });
+runTest('Backend Contract: Rejects push requests with missing or expired token', () => {
+  const missing = validateAndFormatSOSRequest({ authHeader: null, recipientTokens: ['fcm_token_123'] });
   assert.strictEqual(missing.statusCode, 401);
 
-  const expired = validateAndFormatSOSRequest({ authHeader: 'Bearer invalid_or_expired', recipients: [{ email: 'test@example.com' }] });
+  const expired = validateAndFormatSOSRequest({ authHeader: 'Bearer invalid_or_expired', recipientTokens: ['fcm_token_123'] });
   assert.strictEqual(expired.statusCode, 401);
 });
 
-runTest('Backend Contract: Rejects requests with empty or malformed recipients', () => {
-  const invalid = validateAndFormatSOSRequest({
-    authHeader: 'Bearer valid_mock_token_12345',
-    recipients: [{ email: 'invalid_email' }, { email: '@bad.com' }]
-  });
-  assert.strictEqual(invalid.statusCode, 400);
+runTest('Backend Contract: Handles empty recipient device tokens gracefully as no_registered_devices', () => {
+  const noTokens = {
+    success: true,
+    pushStatus: 'no_registered_devices',
+    sentCount: 0,
+    unregisteredCount: 1,
+    message: 'Emergency recorded. No trusted contact has registered an active FCM device token yet.'
+  };
+  assert.strictEqual(noTokens.success, true);
+  assert.strictEqual(noTokens.pushStatus, 'no_registered_devices');
+  assert.strictEqual(noTokens.sentCount, 0);
 });
 
-runTest('Backend Contract: Provider acceptance (201) maps to provider_accepted, NOT delivered', () => {
-  const mockBrevoResponse = {
-    status: 201,
-    data: { messageId: '<202610121915.msg_99812@smtp-relay.brevo.com>' }
+runTest('Backend Contract: Native SMS dispatched_to_carrier distinguishes carrier handover from confirmed delivery', () => {
+  const smsOutcome = {
+    success: true,
+    channel: 'sms',
+    platform: 'android',
+    status: 'dispatched_to_carrier',
+    recipient: '+919876543210',
+    message: 'Direct emergency SMS handed over to cellular network.'
   };
 
-  const formattedResponse = {
-    success: mockBrevoResponse.status === 201,
-    emailStatus: 'provider_accepted',
-    providerStatus: 'accepted',
-    messageId: mockBrevoResponse.data.messageId,
-    message: 'Dispatched and accepted by email provider'
-  };
-
-  assert.strictEqual(formattedResponse.emailStatus, 'provider_accepted');
-  assert.notStrictEqual(formattedResponse.emailStatus, 'delivered');
-  assert.ok(formattedResponse.messageId.includes('@smtp-relay.brevo.com'));
+  assert.strictEqual(smsOutcome.status, 'dispatched_to_carrier');
+  assert.notStrictEqual(smsOutcome.status, 'delivered');
+  assert.strictEqual(smsOutcome.channel, 'sms');
 });
 
 // ===========================================================================

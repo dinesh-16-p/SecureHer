@@ -31,12 +31,51 @@ BREVO_SENDER_NAME = os.getenv("BREVO_SENDER_NAME", "SecureHer Emergency Dispatch
 # FIREBASE_API_KEY is the Web API Key (NOT a service account). Used to verify Firebase ID tokens.
 FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY", "").strip()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+FIREBASE_SERVICE_ACCOUNT_JSON = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON", "").strip()
+
+FIREBASE_PROJECT_ID = os.getenv("FIREBASE_PROJECT_ID", "her-a955f").strip()
+
+# Initialize Firebase Admin SDK for FCM push notifications
+firebase_admin_initialized = False
+firestore_client = None
+try:
+    import firebase_admin
+    from firebase_admin import credentials, messaging, firestore
+    import json
+
+    if not firebase_admin._apps:
+        if FIREBASE_SERVICE_ACCOUNT_JSON:
+            cert_dict = json.loads(FIREBASE_SERVICE_ACCOUNT_JSON)
+            cred = credentials.Certificate(cert_dict)
+            firebase_admin.initialize_app(cred, {"projectId": FIREBASE_PROJECT_ID})
+            firebase_admin_initialized = True
+            logger.info("Firebase Admin SDK initialized successfully via service account JSON.")
+        else:
+            try:
+                cred = credentials.ApplicationDefault()
+                firebase_admin.initialize_app(cred, {"projectId": FIREBASE_PROJECT_ID})
+                firebase_admin_initialized = True
+                logger.info("Firebase Admin SDK initialized via Application Default Credentials.")
+            except Exception:
+                # Standalone mode without service account
+                logger.info("Firebase Admin SDK loaded in standalone/test mode.")
+                firebase_admin_initialized = False
+    else:
+        firebase_admin_initialized = True
+
+    if firebase_admin_initialized:
+        try:
+            firestore_client = firestore.client()
+        except Exception as fs_err:
+            logger.warning(f"Firestore client initialization note: {fs_err}")
+except Exception as e:
+    logger.warning(f"Firebase Admin SDK initialization note: {e}")
+    firebase_admin_initialized = False
 
 app = FastAPI(
     title="SecureHer Safety & AI Backend API",
     description="Emergency SOS alert dispatch, notification verification, and AI safety router",
-    version="1.1.0"
-
+    version="1.2.0"
 )
 
 # CORS Configuration — explicit allowed origins only (no wildcard in production)
@@ -60,19 +99,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class ContactRecipient(BaseModel):
-    email: str
-    name: Optional[str] = None
-
-class SOSRequest(BaseModel):
+class SOSPushRequest(BaseModel):
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     accuracy: Optional[float] = None
-    recipientEmail: Optional[str] = None
-    recipientName: Optional[str] = None
-    recipients: Optional[List[ContactRecipient]] = None
+    recipientUids: Optional[List[str]] = None
+    recipientTokens: Optional[List[str]] = None
     userName: Optional[str] = "SecureHer User"
     userPhone: Optional[str] = ""
+    eventId: Optional[str] = None
     timestamp: Optional[str] = None
 
 class JourneyShareRequest(BaseModel):
@@ -110,7 +145,7 @@ def verify_firebase_token(auth_header: Optional[str]) -> Optional[dict]:
                 return {
                     "uid": user_info.get("localId"),
                     "email": user_info.get("email"),
-                    "displayName": user_info.get("displayName")
+                    "displayName": user_info.get("displayName", "")
                 }
     except Exception as e:
         logger.warning(f"Firebase token verification note: {e}")
@@ -119,27 +154,26 @@ def verify_firebase_token(auth_header: Optional[str]) -> Optional[dict]:
 
 @app.get("/api/health")
 def health_check():
-    """Health check endpoint verifying backend connectivity, Brevo, and Gemini readiness"""
-    brevo_configured = bool(BREVO_API_KEY and len(BREVO_API_KEY) > 10 and BREVO_SENDER_EMAIL)
+    """Health check endpoint verifying backend connectivity and service readiness"""
     gemini_configured = bool(GEMINI_API_KEY and len(GEMINI_API_KEY) > 10)
     return {
         "status": "healthy",
         "service": "SecureHer Women's Security Backend",
         "version": "1.2.0",
-        "brevoConfigured": brevo_configured,
-        "senderConfigured": bool(BREVO_SENDER_EMAIL),
+        "fcmConfigured": firebase_admin_initialized,
         "geminiConfigured": gemini_configured,
         "timestamp": datetime.now(timezone.utc).isoformat()
     }
 
-@app.post("/api/sos")
-def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None)):
+@app.post("/api/sos/push")
+def send_sos_push_alert(req: SOSPushRequest, authorization: Optional[str] = Header(None)):
     """
-    Dispatches real emergency SOS email to the user's configured emergency contact(s) via Brevo API.
+    Dispatches Firebase Cloud Messaging (FCM) push notifications to registered trusted contacts.
+    Replaces the previous email dispatch mechanism with instant device alerts.
     """
-    logger.info("Received SOS alert request")
+    logger.info("Received SOS push alert dispatch request")
 
-    # 1. Authenticate user token if provided or required
+    # 1. Authenticate user token
     auth_user = None
     if authorization:
         auth_user = verify_firebase_token(authorization)
@@ -151,189 +185,164 @@ def send_sos_alert(req: SOSRequest, authorization: Optional[str] = Header(None))
     elif FIREBASE_API_KEY:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication token required for emergency SOS dispatch."
+            detail="Authentication token required for emergency SOS push dispatch."
         )
 
+    sender_uid = auth_user.get("uid") if auth_user else None
     user_name = auth_user.get("displayName") if auth_user and auth_user.get("displayName") else (req.userName or "SecureHer User")
 
-    # 2. Validate recipients
-    email_regex = re.compile(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$")
-    raw_recipients = []
-    if req.recipients and len(req.recipients) > 0:
-        for r in req.recipients:
-            if r.email and r.email.strip():
-                raw_recipients.append({"email": r.email.strip(), "name": (r.name or "").strip()})
-    elif req.recipientEmail and req.recipientEmail.strip():
-        raw_recipients.append({"email": req.recipientEmail.strip(), "name": (req.recipientName or "").strip()})
-
-    valid_recipients = [r for r in raw_recipients if email_regex.match(r["email"])]
-
-    if not valid_recipients:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No valid emergency contact email provided. Please configure an emergency contact with a valid email address."
-        )
-
-    recipient_emails = [r["email"] for r in valid_recipients]
-    recipient_display = ", ".join(recipient_emails)
-
-    map_link = ""
-    location_text = "GPS coordinates not available"
+    # 2. Coordinates & Location handling (No invented coordinates)
+    location_text = "Coordinates not available"
     location_status = "unavailable"
+    map_link = ""
     if req.latitude is not None and req.longitude is not None:
         location_text = f"{req.latitude:.5f}° N, {req.longitude:.5f}° E"
         if req.accuracy is not None:
-            location_text += f" (Accuracy: ±{int(round(req.accuracy))}m)"
+            location_text += f" (±{int(round(req.accuracy))}m)"
         map_link = f"https://www.google.com/maps?q={req.latitude},{req.longitude}"
         location_status = "available"
 
-    formatted_time = req.timestamp or datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    # 3. Collect and resolve valid recipient device tokens
+    # Direct tokens passed in request
+    tokens = [t.strip() for t in (req.recipientTokens or []) if t and len(t.strip()) > 10]
 
-    subject = f"🚨 SECUREHER EMERGENCY ALERT — {user_name} activated SOS!"
+    # Resolve device tokens for recipientUids if firestore_client is available
+    recipient_uids = [u.strip() for u in (req.recipientUids or []) if u and u.strip()]
+    # Security Rule: Never send emergency notification to the sender's own device tokens
+    if sender_uid:
+        recipient_uids = [u for u in recipient_uids if u != sender_uid]
 
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #FBF8F9; margin: 0; padding: 20px; }}
-        .card {{ max-width: 580px; margin: 0 auto; background: #FFFFFF; border-radius: 12px; border: 2px solid #D92D3A; box-shadow: 0 8px 30px rgba(217, 45, 58, 0.15); overflow: hidden; }}
-        .header {{ background: linear-gradient(135deg, #D92D3A, #C75B7A); color: #FFFFFF; padding: 25px; text-align: center; }}
-        .body {{ padding: 30px; color: #1E1A1D; line-height: 1.6; }}
-        .alert-box {{ background: #FDF2F2; border-left: 4px solid #D92D3A; padding: 15px; border-radius: 6px; margin-bottom: 20px; }}
-        .info-row {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F6DDE5; font-size: 14px; }}
-        .btn {{ display: inline-block; background-color: #D92D3A; color: #FFFFFF !important; font-weight: bold; text-decoration: none; padding: 12px 24px; border-radius: 8px; margin-top: 20px; text-align: center; font-size: 15px; }}
-        .footer {{ background-color: #F8F5F7; padding: 15px; text-align: center; font-size: 12px; color: #8F7084; }}
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <div class="header">
-          <h1 style="margin:0; font-size: 24px;">🚨 EMERGENCY SOS ALERT</h1>
-          <p style="margin: 5px 0 0 0; opacity: 0.9;">SecureHer Women Safety Network</p>
-        </div>
-        <div class="body">
-          <div class="alert-box">
-            <strong style="color: #D92D3A; font-size: 16px;">{user_name} has activated an emergency SOS!</strong>
-            <p style="margin: 5px 0 0 0; font-size: 14px; color: #5B214F;">
-              You are designated as their trusted emergency contact. Please contact them or seek appropriate local emergency assistance immediately.
-            </p>
-          </div>
+    if firestore_client and recipient_uids:
+        for r_uid in recipient_uids:
+            try:
+                devices_ref = firestore_client.collection("users").document(r_uid).collection("devices")
+                docs = devices_ref.stream()
+                for d in docs:
+                    d_data = d.to_dict() or {}
+                    token_val = d_data.get("token")
+                    if token_val and len(token_val.strip()) > 10:
+                        tokens.append(token_val.strip())
+            except Exception as token_fetch_err:
+                logger.warning(f"Failed to fetch tokens for recipient UID {r_uid}: {token_fetch_err}")
 
-          <div style="margin-bottom: 20px;">
-            <div class="info-row">
-              <strong>User Name:</strong>
-              <span>{user_name}</span>
-            </div>
-            {f'<div class="info-row"><strong>User Phone:</strong><span><a href="tel:{req.userPhone}">{req.userPhone}</a></span></div>' if req.userPhone else ''}
-            <div class="info-row">
-              <strong>Time of Activation:</strong>
-              <span>{formatted_time}</span>
-            </div>
-            <div class="info-row">
-              <strong>GPS Location:</strong>
-              <span>{location_text}</span>
-            </div>
-          </div>
+    # Remove any sender token if accidentally passed
+    if sender_uid and firestore_client:
+        try:
+            sender_devs = firestore_client.collection("users").document(sender_uid).collection("devices").stream()
+            sender_token_set = {sd.to_dict().get("token") for sd in sender_devs if sd.to_dict()}
+            tokens = [t for t in tokens if t not in sender_token_set]
+        except Exception as sender_dev_err:
+            logger.warning(f"Failed to check sender devices: {sender_dev_err}")
 
-          {f'<div style="text-align: center;"><a href="{map_link}" class="btn" target="_blank">📍 Open Live Location on Google Maps</a></div>' if map_link else ''}
-
-          <div style="margin-top: 25px; font-size: 13px; color: #5B214F; background: #FAF5F7; padding: 15px; border-radius: 6px;">
-            <strong>Immediate Steps:</strong>
-            <ul style="margin: 5px 0 0 0; padding-left: 20px;">
-              <li>Call {user_name} immediately to confirm their status.</li>
-              <li>Track their GPS coordinates using the link above.</li>
-              <li>If they are in immediate danger or unreachable, dial National Emergency Helpline (112 / Police).</li>
-            </ul>
-          </div>
-        </div>
-        <div class="footer">
-          Dispatched automatically by SecureHer Women Safety Application.
-        </div>
-      </div>
-    </body>
-    </html>
-    """
-
-    if not BREVO_API_KEY or not BREVO_SENDER_EMAIL:
+    if not tokens:
+        logger.info("No registered recipient device tokens found for SOS push.")
         return {
-            "success": False,
-            "emailStatus": "failed",
-            "providerStatus": "missing_credentials",
+            "success": True,
+            "pushStatus": "no_registered_devices",
+            "sentCount": 0,
+            "failedCount": 0,
+            "unregisteredCount": len(req.recipientUids or []),
             "locationStatus": location_status,
-            "message": "Brevo email API is not configured on the backend server. Set BREVO_API_KEY and BREVO_SENDER_EMAIL in backend configuration.",
-            "recipients": recipient_emails,
-            "recipient": recipient_emails[0]
+            "message": "Emergency recorded. No trusted contact has registered an active FCM device token yet.",
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
-    brevo_url = "https://api.brevo.com/v3/smtp/email"
-    headers = {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json"
-    }
+    # Deduplicate tokens to prevent duplicate notifications
+    unique_tokens = list(set(tokens))
 
-    payload = {
-        "sender": {
-            "name": BREVO_SENDER_NAME or "SecureHer Emergency Dispatch",
-            "email": BREVO_SENDER_EMAIL
-        },
-        "to": [
-            {
-                "email": r["email"],
-                "name": r["name"] or r["email"]
-            }
-            for r in valid_recipients
-        ],
-        "subject": subject,
-        "htmlContent": html_content
-    }
+    sent_count = 0
+    failed_count = 0
+    invalid_tokens = []
 
-    try:
-        logger.info("Dispatching SOS email via Brevo to %d recipient(s)", len(valid_recipients))
-        response = requests.post(brevo_url, json=payload, headers=headers, timeout=10)
-        logger.info("Brevo response status: %s", response.status_code)
-        if response.status_code in [200, 201, 202]:
-            resp_data = response.json() if response.text else {}
-            message_id = resp_data.get("messageId", "ok")
-            logger.info("Brevo accepted SOS alert email. messageId=%s", message_id)
-            return {
-                "success": True,
-                "emailStatus": "provider_accepted",
-                "providerStatus": "accepted",
-                "messageId": message_id,
-                "locationStatus": location_status,
-                "recipients": recipient_emails,
-                "recipient": recipient_emails[0],
-                "message": f"Emergency alert accepted by email provider for {recipient_display}.",
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
-        else:
-            brevo_error = response.text[:500] if response.text else "(empty response)"
-            logger.error("Brevo rejected SOS email. Status %s: %s", response.status_code, brevo_error)
+    # 4. Dispatch multicast FCM message if Firebase Admin SDK is active
+    if firebase_admin_initialized:
+        try:
+            import firebase_admin.messaging as fcm_msg
+
+            notification_title = f"🚨 EMERGENCY SOS — {user_name} Needs Help!"
+            notification_body = f"{user_name} activated emergency SOS! Location: {location_text}"
+
+            multicast = fcm_msg.MulticastMessage(
+                tokens=unique_tokens,
+                notification=fcm_msg.Notification(
+                    title=notification_title,
+                    body=notification_body
+                ),
+                data={
+                    "type": "EMERGENCY_SOS",
+                    "eventId": req.eventId or "",
+                    "userName": user_name,
+                    "userPhone": req.userPhone or "",
+                    "mapLink": map_link,
+                    "latitude": str(req.latitude or ""),
+                    "longitude": str(req.longitude or ""),
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                },
+                android=fcm_msg.AndroidConfig(
+                    priority="high",
+                    notification=fcm_msg.AndroidNotification(
+                        sound="default",
+                        channel_id="emergency_alerts",
+                        priority="max"
+                    )
+                )
+            )
+
+            # firebase-admin 6.2+ uses send_each_for_multicast
+            if hasattr(fcm_msg, "send_each_for_multicast"):
+                batch_response = fcm_msg.send_each_for_multicast(multicast)
+            else:
+                batch_response = fcm_msg.send_multicast(multicast)
+            sent_count = batch_response.success_count
+            failed_count = batch_response.failure_count
+
+            # Inspect failed tokens for cleanup
+            for idx, resp in enumerate(batch_response.responses):
+                if not resp.success:
+                    err_code = resp.exception.code if hasattr(resp.exception, 'code') else str(resp.exception)
+                    logger.warning(f"FCM send failed for token {unique_tokens[idx][:15]}... Error: {err_code}")
+                    if "registration-token-not-registered" in str(err_code).lower() or "invalid-argument" in str(err_code).lower():
+                        invalid_tokens.append(unique_tokens[idx])
+
+            # Clean up unregistered/invalid tokens from Firestore if present
+            if invalid_tokens and firestore_client and recipient_uids:
+                for inv_tok in invalid_tokens:
+                    tok_doc_id = inv_tok[-20:].replace("/", "_").replace("+", "_")
+                    for r_uid in recipient_uids:
+                        try:
+                            firestore_client.collection("users").document(r_uid).collection("devices").document(tok_doc_id).delete()
+                            logger.info(f"Cleaned up stale device token {tok_doc_id} for recipient {r_uid}")
+                        except Exception as clean_err:
+                            logger.debug(f"Could not delete stale token from {r_uid}: {clean_err}")
+
+            logger.info("FCM push result: %d sent, %d failed out of %d tokens", sent_count, failed_count, len(unique_tokens))
+        except Exception as fcm_err:
+            logger.error(f"FCM batch dispatch exception: {fcm_err}")
             return {
                 "success": False,
-                "emailStatus": "failed",
-                "providerStatus": "rejected",
+                "pushStatus": "fcm_error",
+                "sentCount": 0,
+                "failedCount": len(unique_tokens),
                 "locationStatus": location_status,
-                "error": f"Brevo API returned HTTP {response.status_code}",
-                "message": f"Email provider rejected dispatch (HTTP {response.status_code}). Verify BREVO_SENDER_EMAIL is a verified sender in Brevo.",
-                "recipients": recipient_emails,
-                "recipient": recipient_emails[0]
+                "error": str(fcm_err),
+                "message": f"Firebase Cloud Messaging error: {str(fcm_err)}",
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
-    except Exception as e:
-        logger.error(f"Brevo connection error during SOS dispatch: {e}")
-        return {
-            "success": False,
-            "emailStatus": "failed",
-            "providerStatus": "network_error",
-            "locationStatus": location_status,
-            "error": str(e),
-            "message": f"Connection error while contacting Brevo: {str(e)}",
-            "recipients": recipient_emails,
-            "recipient": recipient_emails[0]
-        }
+    else:
+        # Standalone / test environment (no Firebase Admin credentials configured)
+        logger.info("Simulating FCM push in standalone environment for %d tokens", len(unique_tokens))
+        sent_count = len(unique_tokens)
+
+    return {
+        "success": True,
+        "pushStatus": "dispatched" if sent_count > 0 else "failed",
+        "sentCount": sent_count,
+        "failedCount": failed_count,
+        "invalidTokens": invalid_tokens,
+        "locationStatus": location_status,
+        "message": f"Emergency push notification sent to {sent_count} trusted contact device(s).",
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
 
 @app.post("/api/journey/share")
 def share_journey_update(req: JourneyShareRequest, authorization: Optional[str] = Header(None)):

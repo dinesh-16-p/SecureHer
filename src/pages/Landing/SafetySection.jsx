@@ -25,8 +25,8 @@ const SafetySection = () => {
       badge: 'High Priority',
       badgeVariant: 'emergency',
       title: 'Emergency SOS Broadcast',
-      description: 'One-press 3-second hold triggers continuous live GPS tracking, sounds emergency alarm, and dispatches verified email alerts to your trusted contacts via Brevo.',
-      features: ['3-second hold prevention', 'Live Google Maps link', 'Verified Brevo transactional emails']
+      description: 'One-press 3-second hold triggers continuous live GPS tracking, sounds siren alarm, and dispatches direct cellular SMS and instant push alerts to your trusted contacts.',
+      features: ['3-second hold prevention', 'Live Google Maps link', 'Direct native SMS & FCM push']
     },
     {
       icon: Navigation,
