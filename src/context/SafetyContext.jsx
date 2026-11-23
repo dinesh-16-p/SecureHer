@@ -19,7 +19,7 @@ import {
   checkAllPermissions
 } from '../services/permissionService';
 import { sosAlarm } from '../services/audio/sosAlarm';
-import { sendSOSPushAlert, checkBackendHealth } from '../services/api/safetyApi';
+import { sendSOSPushAlert, sendSOSEmailAlert, checkBackendHealth } from '../services/api/safetyApi';
 import {
   dispatchEmergencySms,
   isNativeSmsSupported,
@@ -52,6 +52,11 @@ export const SafetyProvider = ({ children }) => {
   const watchIdRef = useRef(null);
   const locationSubscribersRef = useRef(new Set());
   const isSosInFlightRef = useRef(false);
+  const currentLocationRef = useRef(null);
+
+  useEffect(() => {
+    currentLocationRef.current = currentLocation;
+  }, [currentLocation]);
 
   const [permissions, setPermissions] = useState({
     location: 'prompt',
@@ -75,6 +80,9 @@ export const SafetyProvider = ({ children }) => {
     smsRecipient: null,
     smsPlatform: null,
     smsFallbackUri: null,
+    emailDispatched: false,
+    emailStatus: 'idle', // 'idle' | 'sent' | 'provider_accepted' | 'failed' | 'no_email' | 'unreachable'
+    emailRecipients: [],
     pushDispatched: false,
     pushStatus: 'idle', // 'idle' | 'dispatched' | 'no_registered_devices' | 'failed'
     pushSentCount: 0,
@@ -190,6 +198,45 @@ export const SafetyProvider = ({ children }) => {
     }
   }, [currentLocation, refreshPermissions]);
 
+  // Manual calibration: allows the user to pin/calibrate their exact position
+  // (essential on desktop laptops or indoor spaces where browser Wi-Fi/IP location is inaccurate)
+  const setManualLocation = useCallback((coords) => {
+    if (!coords) {
+      // Clear manual override and trigger a fresh GPS acquisition
+      getCurrentPosition({ forceFresh: true });
+      return;
+    }
+    const { latitude, longitude, accuracy = 5, address = null } = coords;
+    const manualFix = {
+      latitude,
+      longitude,
+      accuracy,
+      accuracyCategory: 'high',
+      heading: null,
+      speed: null,
+      altitude: null,
+      timestamp: Date.now(),
+      ageMs: 0,
+      isFresh: true,
+      isStale: false,
+      source: 'manual_calibration',
+      isCalibrated: true,
+      address
+    };
+    setCurrentLocation(manualFix);
+    currentLocationRef.current = manualFix;
+    setLocationError(null);
+
+    // Broadcast to all active subscribers
+    locationSubscribersRef.current.forEach((cb) => {
+      try {
+        cb(manualFix);
+      } catch (err) {
+        console.warn('Location subscriber notification note:', err);
+      }
+    });
+  }, [getCurrentPosition]);
+
   // Centralized live location watch with shared subscriber registry
   const startWatchingLocation = useCallback((subscriberCallback) => {
     if (subscriberCallback && typeof subscriberCallback === 'function') {
@@ -201,7 +248,24 @@ export const SafetyProvider = ({ children }) => {
       setIsWatchingLocation(true);
       const wid = watchLocationAccess(
         (pos) => {
+          // If user manually calibrated their position, don't let coarse browser IP overwrite it
+          if (currentLocationRef.current?.isCalibrated && (pos.accuracy == null || pos.accuracy > 25)) {
+            return;
+          }
+          // If we already have a fresh (< 30s) high-accuracy fix, reject temporary low-accuracy spike (> 200m)
+          if (
+            currentLocationRef.current &&
+            currentLocationRef.current.isFresh &&
+            currentLocationRef.current.accuracy != null &&
+            currentLocationRef.current.accuracy <= 25 &&
+            pos.accuracy != null &&
+            pos.accuracy > 200
+          ) {
+            return;
+          }
+
           setCurrentLocation(pos);
+          currentLocationRef.current = pos;
           setLocationError(null);
           // Broadcast to all active subscribers
           locationSubscribersRef.current.forEach((cb) => {
@@ -334,6 +398,16 @@ export const SafetyProvider = ({ children }) => {
       const recipientPhones = validPhoneContacts.map((c) => c.phone);
       const recipientUids = validPhoneContacts.map((c) => c.id);
 
+      // Email recipients resolution
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const validEmailContacts = (emergencyContacts || [])
+        .filter((c) => c.email && emailRegex.test(c.email.trim()))
+        .map((c) => ({
+          email: c.email.trim(),
+          name: c.name?.trim() || 'Emergency Contact'
+        }));
+      const recipientEmails = validEmailContacts.map((c) => c.email);
+
       if (user) {
         try {
           createdEventId = await logSafetyEvent(user.uid, {
@@ -347,8 +421,11 @@ export const SafetyProvider = ({ children }) => {
             locationTimestamp: targetLoc?.timestamp ?? null,
             isLocationStale: targetLoc?.isStale ?? false,
             recipientPhone: primaryPhone,
+            recipientEmail: recipientEmails.length > 0 ? recipientEmails[0] : null,
             recipients: recipientPhones,
+            recipientEmails,
             smsStatus: 'dispatching',
+            emailStatus: validEmailContacts.length > 0 ? 'dispatching' : 'no_email',
             pushStatus: 'dispatching'
           });
           setSosEventId(createdEventId);
@@ -387,7 +464,14 @@ export const SafetyProvider = ({ children }) => {
         }
       }
 
-      // 5. Channel 2: Firebase Cloud Messaging (FCM) Push Notification Dispatch via FastAPI Backend
+      // 5. Channel 2: Emergency Alert Email Dispatch via Brevo API
+      let emailResult = {
+        success: false,
+        emailStatus: 'no_email',
+        message: 'No emergency contact email configured.'
+      };
+
+      // 6. Channel 3: Firebase Cloud Messaging (FCM) Push Notification Dispatch
       let pushResult = {
         success: false,
         pushStatus: 'skipped',
@@ -400,47 +484,76 @@ export const SafetyProvider = ({ children }) => {
         try {
           idToken = await user.getIdToken();
         } catch (tokErr) {
-          console.warn('Could not retrieve Firebase ID token for push:', tokErr);
+          console.warn('Could not retrieve Firebase ID token:', tokErr);
         }
       }
 
-      try {
-        pushResult = await sendSOSPushAlert({
-          token: idToken,
-          latitude: targetLoc?.latitude ?? null,
-          longitude: targetLoc?.longitude ?? null,
-          accuracy: targetLoc?.accuracy ?? null,
-          recipientUids,
-          userName,
-          userPhone: userProfile?.phone || '',
-          eventId: createdEventId
-        });
-      } catch (pushErr) {
+      // Dispatch Email & Push in parallel
+      const emailPromise = validEmailContacts.length > 0
+        ? sendSOSEmailAlert({
+            token: idToken,
+            latitude: targetLoc?.latitude ?? null,
+            longitude: targetLoc?.longitude ?? null,
+            accuracy: targetLoc?.accuracy ?? null,
+            recipients: validEmailContacts,
+            recipientEmail: validEmailContacts[0].email,
+            recipientName: validEmailContacts[0].name,
+            userName,
+            userPhone: userProfile?.phone || '',
+            eventId: createdEventId
+          }).catch((emailErr) => {
+            console.warn('Email dispatch exception:', emailErr);
+            return {
+              success: false,
+              emailStatus: 'failed',
+              message: emailErr.message
+            };
+          })
+        : Promise.resolve({
+            success: false,
+            emailStatus: 'no_email',
+            message: 'No emergency contact email configured.'
+          });
+
+      const pushPromise = sendSOSPushAlert({
+        token: idToken,
+        latitude: targetLoc?.latitude ?? null,
+        longitude: targetLoc?.longitude ?? null,
+        accuracy: targetLoc?.accuracy ?? null,
+        recipientUids,
+        userName,
+        userPhone: userProfile?.phone || '',
+        eventId: createdEventId
+      }).catch((pushErr) => {
         console.warn('Push alert exception:', pushErr);
-        pushResult = {
+        return {
           success: false,
           pushStatus: 'failed',
           message: pushErr.message
         };
-      }
+      });
 
-      // 6. Update Firestore event with SMS and Push outcomes
+      [emailResult, pushResult] = await Promise.all([emailPromise, pushPromise]);
+
+      // 7. Update Firestore event with SMS, Email, and Push outcomes
       if (user && createdEventId) {
         try {
           await updateSafetyEvent(user.uid, createdEventId, {
             smsStatus: smsResult.status || 'failed',
             smsRecipient: primaryPhone,
             smsPlatform: smsResult.platform || (isNativeSmsSupported() ? 'android' : 'web'),
+            emailStatus: emailResult.emailStatus || 'failed',
+            emailRecipients: recipientEmails,
             pushStatus: pushResult.pushStatus || 'failed',
             pushSentCount: pushResult.sentCount || 0,
-            backendMessage: pushResult.message || null
+            backendMessage: emailResult.message || pushResult.message || null
           });
         } catch (updErr) {
           console.warn('Failed to update safety event in Firestore:', updErr);
         }
       }
 
-      // 7. Build transparent human-readable status message
+      // 8. Build transparent human-readable status message
       let statusSummary = '';
       if (smsResult.status === 'dispatched_to_carrier') {
         statusSummary = `Direct cellular SMS sent to ${primaryPhone}`;
@@ -452,6 +565,14 @@ export const SafetyProvider = ({ children }) => {
         statusSummary = 'No active SIM card detected for direct cellular SMS';
       } else {
         statusSummary = smsResult.message || 'Emergency trigger processed';
+      }
+
+      if (emailResult.success) {
+        statusSummary += ` • Emergency email dispatched to ${recipientEmails.join(', ')}`;
+      } else if (emailResult.emailStatus === 'missing_credentials') {
+        statusSummary += ' • Email gateway pending setup';
+      } else if (emailResult.emailStatus !== 'no_email') {
+        statusSummary += ` • Email ${emailResult.emailStatus}`;
       }
 
       if (pushResult.success && pushResult.sentCount > 0) {
@@ -468,7 +589,7 @@ export const SafetyProvider = ({ children }) => {
         statusSummary += ' • Coordinates unavailable';
       }
 
-      // 8. Update UI Status State
+      // 9. Update UI Status State
       setSosStatus({
         alarmPlaying: isAlarmPlaying,
         alarmAutoplayBlocked: isAutoplayBlocked,
@@ -482,23 +603,27 @@ export const SafetyProvider = ({ children }) => {
         smsRecipient: primaryPhone,
         smsPlatform: smsResult.platform || (isNativeSmsSupported() ? 'android' : 'web'),
         smsFallbackUri: smsResult.smsUri || null,
+        emailDispatched: emailResult.success,
+        emailStatus: emailResult.emailStatus,
+        emailRecipients: recipientEmails,
         pushDispatched: pushResult.success && pushResult.sentCount > 0,
         pushStatus: pushResult.pushStatus,
         pushSentCount: pushResult.sentCount || 0,
-        backendAvailable: pushResult.backendAvailable,
+        backendAvailable: pushResult.backendAvailable ?? emailResult.backendAvailable,
         message: statusSummary,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
 
       return {
         sms: smsResult,
+        email: emailResult,
         push: pushResult,
         location: targetLoc
       };
     } finally {
       isSosInFlightRef.current = false;
     }
-  }, [currentLocation, user, userProfile, primaryEmergencyContact, validPhoneContacts]);
+  }, [currentLocation, user, userProfile, primaryEmergencyContact, validPhoneContacts, emergencyContacts]);
 
   // Cancel SOS
   const cancelSOS = useCallback(async () => {
@@ -520,6 +645,12 @@ export const SafetyProvider = ({ children }) => {
       ...prev,
       alarmPlaying: false,
       alarmAutoplayBlocked: false,
+      smsDispatched: false,
+      smsStatus: 'idle',
+      emailDispatched: false,
+      emailStatus: 'idle',
+      pushDispatched: false,
+      pushStatus: 'idle',
       message: 'SOS Deactivated'
     }));
   }, [user, sosEventId]);
@@ -565,6 +696,7 @@ export const SafetyProvider = ({ children }) => {
     isWatchingLocation,
     getCurrentPosition,
     startWatchingLocation,
+    setManualLocation,
     isLocationFresh,
     getAccuracyCategory,
     LOCATION_MAX_AGE_MS,

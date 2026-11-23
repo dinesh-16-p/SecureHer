@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Shield, AlertTriangle, MapPin, PhoneCall, CheckCircle2, Radio, Volume2, VolumeX, MessageSquare, Bell, ExternalLink, AlertCircle } from 'lucide-react';
+import { Shield, AlertTriangle, MapPin, PhoneCall, CheckCircle2, Radio, Volume2, VolumeX, MessageSquare, Bell, ExternalLink, AlertCircle, Mail } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
@@ -392,6 +392,35 @@ const SOSPage = () => {
                 ) : (
                   <span style={{ color: 'var(--color-emergency)', fontWeight: 600, fontSize: '0.85rem' }}>
                     {primaryEmergencyContact ? `SMS Failed (${primaryEmergencyContact.phone})` : 'No phone number configured'}
+                  </span>
+                )}
+              </div>
+
+              {/* Emergency Email Status */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.9rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--color-primary)' }}>
+                  <Mail size={18} color="var(--color-secondary)" /> <strong>Emergency Email:</strong>
+                </span>
+                {sosStatus.emailDispatched ? (
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ color: '#2E7D32', fontWeight: 700 }}>
+                      Dispatched via Brevo ✓
+                    </span>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+                      To: {sosStatus.emailRecipients?.join(', ') || 'Emergency Contact'}
+                    </div>
+                  </div>
+                ) : sosStatus.emailStatus === 'dispatching' ? (
+                  <span style={{ color: '#B26A00', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                    Sending emergency alert email...
+                  </span>
+                ) : sosStatus.emailStatus === 'no_email' ? (
+                  <span style={{ color: 'var(--color-text-muted)', fontSize: '0.85rem', fontStyle: 'italic' }}>
+                    No contact email configured
+                  </span>
+                ) : (
+                  <span style={{ color: 'var(--color-emergency)', fontSize: '0.85rem' }}>
+                    {sosStatus.emailStatus === 'idle' ? 'Pending email dispatch...' : 'Email alert unavailable'}
                   </span>
                 )}
               </div>

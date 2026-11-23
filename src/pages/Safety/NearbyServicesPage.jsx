@@ -21,7 +21,7 @@ import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import { useSafety } from '../../context/SafetyContext';
-import { updateAccuracyCircleOnMap, removeAccuracyCircleFromMap } from '../../services/map/mapUtils';
+import { updateAccuracyCircleOnMap, removeAccuracyCircleFromMap, configureMapMissingImageResolver } from '../../services/map/mapUtils';
 
 const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY || 'BE8E5HFWGrNH05pGD0M4';
 const MAPTILER_STYLE = `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_API_KEY}`;
@@ -199,6 +199,8 @@ const NearbyServicesPage = () => {
         center: [initialLng, initialLat],
         zoom: initialZoom
       });
+
+      configureMapMissingImageResolver(map);
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 

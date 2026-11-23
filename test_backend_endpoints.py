@@ -13,7 +13,7 @@ from fastapi import HTTPException
 
 # Add backend directory to sys.path
 sys.path.insert(0, 'backend')
-from main import app, health_check, send_sos_push_alert, share_journey_update, SOSPushRequest, JourneyShareRequest
+from main import app, health_check, send_sos_push_alert, share_journey_update, send_sos_email_alert, SOSPushRequest, JourneyShareRequest, SOSEmailRequest
 
 class TestBackendEndpoints(unittest.TestCase):
 
@@ -161,6 +161,56 @@ class TestBackendEndpoints(unittest.TestCase):
             with self.assertRaises(HTTPException) as ctx:
                 share_journey_update(req, authorization="Bearer valid_token_12345")
             self.assertEqual(ctx.exception.status_code, 400)
+
+    def test_sos_email_invalid_recipient_rejected_with_400(self):
+        """Verify SOS email rejects invalid recipient email"""
+        req = SOSEmailRequest(
+            latitude=12.9716,
+            longitude=77.5946,
+            recipientEmail="invalid_email"
+        )
+        with patch("main.verify_firebase_token", return_value={"uid": "user123"}):
+            with self.assertRaises(HTTPException) as ctx:
+                send_sos_email_alert(req, authorization="Bearer valid_token")
+            self.assertEqual(ctx.exception.status_code, 400)
+
+    def test_sos_email_successful_dispatch(self):
+        """Verify SOS email dispatch succeeds when Brevo returns 201"""
+        req = SOSEmailRequest(
+            latitude=19.0760,
+            longitude=72.8777,
+            accuracy=12.0,
+            recipientEmail="guardian@example.com",
+            userName="Ananya"
+        )
+        mock_resp = MagicMock()
+        mock_resp.status_code = 201
+        mock_resp.text = '{"messageId": "<test_msg_12345@smtp-relay.brevo.com>"}'
+        mock_resp.json.return_value = {"messageId": "<test_msg_12345@smtp-relay.brevo.com>"}
+
+        with patch("main.verify_firebase_token", return_value={"uid": "user123", "displayName": "Ananya"}), \
+             patch("main.BREVO_API_KEY", "mock_brevo_key_12345678"), \
+             patch("main.BREVO_SENDER_EMAIL", "alerts@secureher.test"), \
+             patch("requests.post", return_value=mock_resp):
+            res = send_sos_email_alert(req, authorization="Bearer valid_token")
+            self.assertTrue(res.get("success"))
+            self.assertEqual(res.get("emailStatus"), "sent")
+            self.assertEqual(res.get("locationStatus"), "available")
+            self.assertIn("guardian@example.com", res.get("recipients", []))
+
+    def test_sos_email_missing_credentials(self):
+        """Verify SOS email reports missing_credentials when Brevo API key is missing"""
+        req = SOSEmailRequest(
+            latitude=19.0760,
+            longitude=72.8777,
+            recipientEmail="guardian@example.com"
+        )
+        with patch("main.verify_firebase_token", return_value={"uid": "user123"}), \
+             patch("main.BREVO_API_KEY", ""):
+            res = send_sos_email_alert(req, authorization="Bearer valid_token")
+            self.assertFalse(res.get("success"))
+            self.assertEqual(res.get("emailStatus"), "failed")
+            self.assertEqual(res.get("providerStatus"), "missing_credentials")
 
 if __name__ == "__main__":
     unittest.main()

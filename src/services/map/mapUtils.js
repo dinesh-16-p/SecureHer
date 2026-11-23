@@ -153,3 +153,49 @@ export function removeAccuracyCircleFromMap(map, sourceId) {
     console.warn('Error removing map source/layers:', err.message);
   }
 }
+
+/**
+ * Global transparent 1x1 fallback pixel used to satisfy missing sprite images in vector styles
+ * (e.g. MapTiler streets-v2 referencing OpenStreetMap tags like "office", " ", "shop", etc.)
+ */
+const EMPTY_FALLBACK_PIXEL = {
+  width: 1,
+  height: 1,
+  data: new Uint8Array([0, 0, 0, 0])
+};
+
+/**
+ * Configures missing image resolver on a MapLibre map instance.
+ * Eliminates "Image ... could not be loaded" console warnings and prevents render loop locks.
+ *
+ * @param {object} map - MapLibre GL map instance
+ */
+export function configureMapMissingImageResolver(map) {
+  if (!map) return;
+
+  // 1. Primary resolver API (MapLibre GL v3+)
+  if (typeof map.setMissingStyleImageResolver === 'function') {
+    try {
+      map.setMissingStyleImageResolver((id) => {
+        if (!map.hasImage(id)) {
+          try {
+            map.addImage(id, EMPTY_FALLBACK_PIXEL);
+          } catch (_) {}
+        }
+      });
+    } catch (_) {}
+  }
+
+  // 2. Secondary fallback event listener ('styleimagemissing')
+  if (typeof map.on === 'function') {
+    map.on('styleimagemissing', (e) => {
+      const id = e?.id;
+      if (id && !map.hasImage(id)) {
+        try {
+          map.addImage(id, EMPTY_FALLBACK_PIXEL);
+        } catch (_) {}
+      }
+    });
+  }
+}
+

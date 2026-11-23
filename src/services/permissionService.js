@@ -81,7 +81,8 @@ export const requestLocationAccess = (options = {}) => {
     enableHighAccuracy = true,
     timeout = 12000,
     maximumAge = 0, // Default to 0 to prefer a fresh hardware fix for safety operations
-    maxAgeMs = LOCATION_MAX_AGE_MS
+    maxAgeMs = LOCATION_MAX_AGE_MS,
+    targetAccuracy = 25 // Target accuracy in meters (<= 25m is high-accuracy satellite lock)
   } = options;
 
   return new Promise((resolve, reject) => {
@@ -90,36 +91,110 @@ export const requestLocationAccess = (options = {}) => {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const fix = formatLocationFix(position, { maxAgeMs, source: 'gps' });
-        resolve(fix);
-      },
-      (error) => {
-        let message = 'Unable to retrieve location.';
-        switch (error.code) {
-          case error.PERMISSION_DENIED:
-            message = 'Location permission was denied. Please allow location access in your browser settings.';
-            break;
-          case error.POSITION_UNAVAILABLE:
-            message = 'Location information is currently unavailable.';
-            break;
-          case error.TIMEOUT:
-            message = 'Location request timed out. Please try again.';
-            break;
-          default:
-            message = error.message || message;
-        }
-        const customErr = new Error(message);
-        customErr.code = error.code;
-        reject(customErr);
-      },
-      {
-        enableHighAccuracy,
-        timeout,
-        maximumAge
+    let resolved = false;
+    let bestFix = null;
+    let watchId = null;
+    let timerId = null;
+
+    const cleanup = () => {
+      if (watchId !== null) {
+        try {
+          navigator.geolocation.clearWatch(watchId);
+        } catch (_) {}
+        watchId = null;
       }
-    );
+      if (timerId !== null) {
+        clearTimeout(timerId);
+        timerId = null;
+      }
+    };
+
+    const finish = (fix) => {
+      if (resolved) return;
+      resolved = true;
+      cleanup();
+      resolve(fix);
+    };
+
+    const fail = (error) => {
+      if (resolved) return;
+      if (bestFix) {
+        // If we gathered at least one fix, return the best fix rather than rejecting
+        finish(bestFix);
+        return;
+      }
+      resolved = true;
+      cleanup();
+      let message = 'Unable to retrieve location.';
+      switch (error?.code) {
+        case 1: // PERMISSION_DENIED
+          message = 'Location permission was denied. Please allow location access in your browser settings.';
+          break;
+        case 2: // POSITION_UNAVAILABLE
+          message = 'Location information is currently unavailable.';
+          break;
+        case 3: // TIMEOUT
+          message = 'Location request timed out. Please try again.';
+          break;
+        default:
+          message = error?.message || message;
+      }
+      const customErr = new Error(message);
+      customErr.code = error?.code;
+      reject(customErr);
+    };
+
+    // Progressive acquisition using watchPosition to allow GPS hardware lock
+    try {
+      const maxWait = Math.min(timeout, 6000);
+      timerId = setTimeout(() => {
+        if (bestFix) {
+          finish(bestFix);
+        } else {
+          // If watchPosition didn't deliver any position yet, do a direct getCurrentPosition fallback
+          navigator.geolocation.getCurrentPosition(
+            (pos) => finish(formatLocationFix(pos, { maxAgeMs, source: 'gps' })),
+            (err) => fail(err),
+            { enableHighAccuracy, timeout: Math.max(1000, timeout - maxWait), maximumAge }
+          );
+        }
+      }, maxWait);
+
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const fix = formatLocationFix(position, { maxAgeMs, source: 'gps' });
+          if (!bestFix || (fix.accuracy != null && (bestFix.accuracy == null || fix.accuracy < bestFix.accuracy))) {
+            bestFix = fix;
+          }
+          // If high-accuracy satellite lock achieved, resolve immediately
+          if (fix.accuracy != null && fix.accuracy <= targetAccuracy) {
+            finish(fix);
+          }
+        },
+        (err) => {
+          if (err.code === 1) { // PERMISSION_DENIED
+            fail(err);
+          } else if (!bestFix) {
+            // Attempt getCurrentPosition fallback
+            navigator.geolocation.getCurrentPosition(
+              (pos) => finish(formatLocationFix(pos, { maxAgeMs, source: 'gps' })),
+              (fallbackErr) => fail(fallbackErr),
+              { enableHighAccuracy, timeout: 5000, maximumAge }
+            );
+          } else {
+            finish(bestFix);
+          }
+        },
+        { enableHighAccuracy, timeout, maximumAge }
+      );
+    } catch (_) {
+      // Direct getCurrentPosition fallback if watchPosition fails
+      navigator.geolocation.getCurrentPosition(
+        (pos) => finish(formatLocationFix(pos, { maxAgeMs, source: 'gps' })),
+        (err) => fail(err),
+        { enableHighAccuracy, timeout, maximumAge }
+      );
+    }
   });
 };
 

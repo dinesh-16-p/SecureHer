@@ -28,6 +28,100 @@ export const checkBackendHealth = async () => {
 };
 
 /**
+ * Dispatch Emergency SOS email alert to trusted emergency contacts via Brevo API
+ */
+export const sendSOSEmailAlert = async ({
+  token,
+  latitude,
+  longitude,
+  accuracy,
+  recipientEmail,
+  recipientName,
+  recipients,
+  userName,
+  userPhone,
+  eventId
+}) => {
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const payload = {
+      latitude: latitude ?? null,
+      longitude: longitude ?? null,
+      accuracy: accuracy ?? null,
+      recipientEmail: recipientEmail || null,
+      recipientName: recipientName || null,
+      recipients: Array.isArray(recipients) ? recipients : [],
+      userName: userName || 'SecureHer User',
+      userPhone: userPhone || '',
+      eventId: eventId || null,
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch(`${API_BASE_URL}/api/sos/email`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+
+    const result = await response.json().catch(() => ({}));
+
+    if (response.ok && result.success) {
+      return {
+        success: true,
+        channel: 'email',
+        emailStatus: result.emailStatus || 'sent',
+        recipients: result.recipients || (recipientEmail ? [recipientEmail] : []),
+        recipient: result.recipient || recipientEmail,
+        messageId: result.messageId,
+        message: result.message || 'Emergency alert email successfully sent.',
+        data: result
+      };
+    } else {
+      const errorDetail =
+        result.detail ||
+        result.error ||
+        result.message ||
+        (response.status === 401
+          ? 'Authentication token invalid or expired'
+          : response.status === 400
+          ? 'Invalid email parameters or missing recipient email'
+          : 'Emergency email dispatch could not be processed.');
+      return {
+        success: false,
+        channel: 'email',
+        emailStatus: result.emailStatus || 'failed',
+        error: errorDetail,
+        message: errorDetail,
+        recipients: result.recipients || (recipientEmail ? [recipientEmail] : []),
+        recipient: result.recipient || recipientEmail,
+        statusCode: response.status,
+        data: result
+      };
+    }
+  } catch (err) {
+    return {
+      success: false,
+      channel: 'email',
+      emailStatus: 'unreachable',
+      error: err.message,
+      message: 'FastAPI backend service is currently unreachable for emergency emails.'
+    };
+  }
+};
+
+/**
  * Dispatch Firebase Cloud Messaging (FCM) push notifications to trusted emergency contacts
  */
 export const sendSOSPushAlert = async ({

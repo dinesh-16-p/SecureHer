@@ -33,4 +33,8 @@ yarn-error.log*
 # Test artifacts
 test_output_pdfs/
 backend/Untitled-1.txt
+extracted_live_media/
+extracted_template_media/
+.firebase/
+test_page_setup.docx
 

@@ -34,7 +34,7 @@ import {
   deleteJourney
 } from '../../services/firebase/firestoreService';
 import { shareJourneyProgress } from '../../services/api/safetyApi';
-import { updateAccuracyCircleOnMap, removeAccuracyCircleFromMap } from '../../services/map/mapUtils';
+import { updateAccuracyCircleOnMap, removeAccuracyCircleFromMap, configureMapMissingImageResolver } from '../../services/map/mapUtils';
 import {
   parseJourneyArrivalTimestamp,
   isJourneyOverdue,
@@ -205,6 +205,8 @@ const JourneyPage = () => {
         center: [initialLng, initialLat],
         zoom: initialZoom
       });
+
+      configureMapMissingImageResolver(map);
 
       map.addControl(new maplibregl.NavigationControl({ showCompass: true }), 'top-right');
 
