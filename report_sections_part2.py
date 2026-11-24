@@ -17,34 +17,41 @@ def build_part2_pages(story, S):
     # PAGE 27: CHAPTER 4 - SYSTEM ARCHITECTURE & DESIGN (HIGH-LEVEL ARCHITECTURE)
     # ═════════════════════════════════════════════════════════════════════════
     story.append(Paragraph("CHAPTER 4: SYSTEM ARCHITECTURE & DETAILED DESIGN", S['ChapHeader']))
-    story.append(HRFlowable(width="100%", thickness=1, color=PRIMARY, spaceBefore=3, spaceAfter=8))
+    story.append(HRFlowable(width="100%", thickness=1, color=PRIMARY, spaceBefore=3, spaceAfter=6))
     story.append(Paragraph("4.1 High-Level Multi-Tier System Architecture", S['SecHeader']))
     story.append(Paragraph(
         "SecureHer is architected as an event-driven, multi-tier reactive system designed for maximum availability, fault tolerance, "
         "and sub-second emergency dispatch. The architecture decouples client-side telemetry capture, local hardware actuation, "
         "and cloud-based synchronization across five distinct operational layers, ensuring zero single points of failure.", S['Body']
     ))
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
+
+    arch_img_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "Project_Reports", "architecture_diagram.png"))
+    if os.path.exists(arch_img_path):
+        story.append(RLImage(arch_img_path, width=420, height=200))
+        story.append(Spacer(1, 2))
+        story.append(Paragraph("<b>Figure 4.1:</b> High-Level Multi-Tier Reactive System Architecture of SecureHer", S['Caption']))
+        story.append(Spacer(1, 3))
 
     arch_layers = [
         [Paragraph("<b>Architectural Layer</b>", S['Bullet']), Paragraph("<b>Subsystems & Technology Stack</b>", S['Bullet']), Paragraph("<b>Operational Function & Latency Budget</b>", S['Bullet'])],
-        [Paragraph("<b>Tier 1: Presentation & Interaction</b>", S['Body']),
-         Paragraph("React 18.3, Vite 5.4, Tailwind CSS, Lucide React, Dynamic PWA Service Worker", S['Body']),
-         Paragraph("Responsive touch UI, optimistic state updates, offline shell rendering (&lt;100 ms).", S['Body'])],
-        [Paragraph("<b>Tier 2: Native Hardware Abstraction</b>", S['Body']),
-         Paragraph("Capacitor 6.0 Bridge, Android Telephony SmsManager, Geolocation Hardware Interface", S['Body']),
-         Paragraph("Direct GSM radio access, background execution wake-locks, camera/mic I/O (&lt;150 ms).", S['Body'])],
-        [Paragraph("<b>Tier 3: Client State & Edge Logic</b>", S['Body']),
-         Paragraph("Zustand React Stores, MapLibre GL 4.7 Vector Engine, Web Audio Synthesizer", S['Body']),
-         Paragraph("Local geofence math, midnight rollover countdown, acoustic siren generation (&lt;50 ms).", S['Body'])],
-        [Paragraph("<b>Tier 4: Cloud Services & Orchestration</b>", S['Body']),
-         Paragraph("Firebase Auth, Cloud Firestore (Distributed NoSQL), Firebase Storage, FCM Push Gateway", S['Body']),
-         Paragraph("Secure persistence, real-time WebSocket fan-out, emergency contact synchronization (&lt;400 ms).", S['Body'])],
-        [Paragraph("<b>Tier 5: External Gateways & APIs</b>", S['Body']),
-         Paragraph("Brevo Transactional SMTP/REST API, OpenStreetMap Overpass Civic API, Nominatim Geocoding", S['Body']),
-         Paragraph("Multi-recipient email dispatch, civic amenity bounding queries, reverse geocoding (&lt;800 ms).", S['Body'])],
+        [Paragraph("<b>Tier 1: Presentation</b>", S['Body']),
+         Paragraph("React 18.3, Vite 5.4, Tailwind CSS, PWA Service Worker", S['Body']),
+         Paragraph("Responsive touch UI, optimistic state updates, offline shell (&lt;100 ms).", S['Body'])],
+        [Paragraph("<b>Tier 2: Native Bridge</b>", S['Body']),
+         Paragraph("Capacitor 6.0, Android SmsManager, Geolocation Interface", S['Body']),
+         Paragraph("Direct GSM radio access, wake-locks, camera/mic I/O (&lt;150 ms).", S['Body'])],
+        [Paragraph("<b>Tier 3: Client Edge Logic</b>", S['Body']),
+         Paragraph("Zustand Stores, MapLibre GL 4.7 Engine, Web Audio API", S['Body']),
+         Paragraph("Local geofence math, midnight rollover countdown, acoustic siren (&lt;50 ms).", S['Body'])],
+        [Paragraph("<b>Tier 4: Cloud Services</b>", S['Body']),
+         Paragraph("Firebase Auth, Cloud Firestore (Distributed NoSQL), FCM Push", S['Body']),
+         Paragraph("Secure persistence, WebSocket fan-out, contact synchronization (&lt;400 ms).", S['Body'])],
+        [Paragraph("<b>Tier 5: External Gateways</b>", S['Body']),
+         Paragraph("Brevo Transactional SMTP/REST API, OpenStreetMap Overpass", S['Body']),
+         Paragraph("Multi-recipient email dispatch, civic amenity bounding queries (&lt;800 ms).", S['Body'])],
     ]
-    arch_tbl = Table(arch_layers, colWidths=[120, 180, 185])
+    arch_tbl = Table(arch_layers, colWidths=[115, 185, 185])
     arch_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), BG_ALT),
         ('TEXTCOLOR', (0,0), (-1,0), PRIMARY),
@@ -52,17 +59,17 @@ def build_part2_pages(story, S):
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('BOX', (0,0), (-1,-1), 1, PRIMARY),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(arch_tbl)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
     story.append(Paragraph(
-        "<b>Architectural Invariants & Fault Isolation:</b><br/>"
-        "1. <i>Independent Telephony Channel:</i> Cellular GSM SMS triggers function directly through Android's baseband processor without requiring IP connectivity or cloud server reachability.<br/>"
-        "2. <i>Edge-First State Machines:</i> Safety timers, geofences, and acoustic sirens run locally inside web workers and audio contexts, guaranteeing execution even if cloud connections drop.<br/>"
-        "3. <i>Asynchronous Fan-Out Pipelines:</i> Cloud push notifications, Firestore audit logging, and Brevo email dispatches are queued in parallel non-blocking execution threads.", S['Callout']
+        "<b>Architectural Invariants & Fault Isolation:</b> "
+        "1. Direct GSM SMS triggers operate via baseband hardware without requiring IP networks. "
+        "2. State machines, safety timers, and acoustic sirens execute locally in edge Web Workers. "
+        "3. Cloud push, Firestore logs, and Brevo email dispatches are queued in parallel non-blocking execution pipelines.", S['Callout']
     ))
     story.append(PageBreak())
 
@@ -75,29 +82,36 @@ def build_part2_pages(story, S):
         "entities that interact with the central platform and the primary information exchanges that occur across system perimeters. "
         "The system boundary encloses the PWA client, native hardware bridge, and cloud backend as a unified processing entity.", S['Body']
     ))
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 3))
 
-    # Conceptual ASCII/Table representation of DFD Level 0
+    struct_img_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "Project_Reports", "structure_diagram.png"))
+    if os.path.exists(struct_img_path):
+        story.append(RLImage(struct_img_path, width=420, height=200))
+        story.append(Spacer(1, 2))
+        story.append(Paragraph("<b>Figure 4.2:</b> SecureHer System Structure & Information Flow Context Diagram", S['Caption']))
+        story.append(Spacer(1, 3))
+
+    # Conceptual Table representation of DFD Level 0
     dfd0_data = [
         [Paragraph("<b>External Entity</b>", S['Bullet']), Paragraph("<b>Inbound Data Flow to SecureHer</b>", S['Bullet']), Paragraph("<b>Outbound Data Flow from SecureHer</b>", S['Bullet'])],
-        [Paragraph("<b>User (Woman in Distress)</b>", S['Body']),
-         Paragraph("Biometric credentials, SOS trigger button click, journey destination & countdown parameters, live calibration drag, audio permission grant.", S['Body']),
-         Paragraph("Acoustic deterrence siren, real-time map with accuracy radius, ETA countdown timer, emergency status confirmation, civic safety pins.", S['Body'])],
-        [Paragraph("<b>Trusted Contacts (Guardians)</b>", S['Body']),
+        [Paragraph("<b>User (In Distress)</b>", S['Body']),
+         Paragraph("Biometric login, SOS button trigger, journey parameters, live GPS calibration drag, mic grant.", S['Body']),
+         Paragraph("Acoustic deterrence siren, real-time map with accuracy circle, ETA countdown timer, civic pins.", S['Body'])],
+        [Paragraph("<b>Trusted Contacts</b>", S['Body']),
          Paragraph("Contact details (Phone, Email, Priority), acknowledgement confirmation of SOS receipt.", S['Body']),
-         Paragraph("Direct GSM Emergency SMS with Google Maps link, Brevo HTML Emergency Email with coordinates & accuracy, FCM push notification alert.", S['Body'])],
-        [Paragraph("<b>Android OS & Hardware Telephony</b>", S['Body']),
-         Paragraph("Raw GNSS satellite NMEA sentences, cell-tower triangulation telemetry, SMS transmission delivery receipts.", S['Body']),
-         Paragraph("DirectSmsPlugin invocation payload (destinations, message string), audio capture request, wake-lock acquisition.", S['Body'])],
-        [Paragraph("<b>Brevo Transactional Email Gateway</b>", S['Body']),
-         Paragraph("SMTP delivery receipt, HTTP 200 OK / 202 Accepted status, message tracking identifier.", S['Body']),
-         Paragraph("REST API POST payload (/v3/smtp/email) containing recipient array, HTML template, sender credentials, geo-hyperlinks.", S['Body'])],
-        [Paragraph("<b>OpenStreetMap & Overpass Civic API</b>", S['Body']),
-         Paragraph("Raw OSM node/way JSON containing coordinates, tags (amenity=police, hospital), contact numbers, opening hours.", S['Body']),
-         Paragraph("Bounding box spatial query parameters [bbox: minLat, minLng, maxLat, maxLng] centered on user coordinates.", S['Body'])],
-        [Paragraph("<b>Firebase Cloud Infrastructure</b>", S['Body']),
+         Paragraph("Direct GSM Emergency SMS with Google Maps link, Brevo HTML Emergency Email with coordinates.", S['Body'])],
+        [Paragraph("<b>Android OS & Hardware</b>", S['Body']),
+         Paragraph("Raw GNSS satellite NMEA telemetry, cell-tower triangulation, SMS delivery receipts.", S['Body']),
+         Paragraph("DirectSmsPlugin payload (destinations, text), audio capture request, wake-lock acquisition.", S['Body'])],
+        [Paragraph("<b>Brevo Email Gateway</b>", S['Body']),
+         Paragraph("SMTP delivery receipt, HTTP 200 OK status, message tracking identifier.", S['Body']),
+         Paragraph("REST API POST payload (/v3/smtp/email) containing recipient array, HTML alert template.", S['Body'])],
+        [Paragraph("<b>OpenStreetMap Overpass</b>", S['Body']),
+         Paragraph("Raw OSM node/way JSON containing coordinates, tags (amenity=police, hospital), phone numbers.", S['Body']),
+         Paragraph("Bounding box spatial query parameters [bbox: minLat, minLng, maxLat, maxLng] from user GPS.", S['Body'])],
+        [Paragraph("<b>Firebase Cloud Infra</b>", S['Body']),
          Paragraph("Auth JWT tokens, real-time snapshot events, FCM push tokens.", S['Body']),
-         Paragraph("User documents, emergency contact records, safety audit logs, forensic audio binary blobs.", S['Body'])],
+         Paragraph("User profiles, emergency contact records, safety audit logs, forensic audio binary blobs.", S['Body'])],
     ]
     dfd0_tbl = Table(dfd0_data, colWidths=[110, 185, 190])
     dfd0_tbl.setStyle(TableStyle([
@@ -107,17 +121,17 @@ def build_part2_pages(story, S):
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
         ('GRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
         ('BOX', (0,0), (-1,-1), 1, PRIMARY),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
+        ('TOPPADDING', (0,0), (-1,-1), 2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2),
     ]))
     story.append(dfd0_tbl)
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 4))
 
     story.append(Paragraph(
-        "<b>DFD Level 0 Security & Boundary Isolation Rules:</b><br/>"
-        "• All external entity communications across IP networks enforce TLS 1.3 encryption in transit with SHA-256 certificate validation.<br/>"
-        "• Direct telephony communication with the Android OS operates entirely via inter-process communication (IPC) through Capacitor JNI, completely bypassing external IP routing.<br/>"
-        "• Third-party civic queries to Overpass API transmit anonymized spatial bounding boxes without attaching user identifiers or persistent session tokens.", S['Callout']
+        "<b>DFD Level 0 Security & Boundary Isolation Rules:</b> "
+        "• External entity communications across IP networks enforce TLS 1.3 encryption with SHA-256 certificate validation. "
+        "• Direct telephony communication with the Android OS operates entirely via IPC through Capacitor JNI, completely bypassing external IP routing. "
+        "• Third-party civic queries to Overpass API transmit anonymized spatial bounding boxes without attaching user identifiers.", S['Callout']
     ))
     story.append(PageBreak())
 

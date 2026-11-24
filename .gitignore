@@ -38,4 +38,9 @@ extracted_live_media/
 extracted_template_media/
 .firebase/
 test_page_setup.docx
+~$*
+*.tmp
+__pycache__/
+*.pyc
+
 
