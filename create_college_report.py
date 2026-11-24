@@ -82,10 +82,11 @@ def create_report():
     p_students.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_students.paragraph_format.space_after = Pt(14)
     students_text = (
-        "Student Name 1 (PRN: ____________)\n"
-        "Student Name 2 (PRN: ____________)\n"
-        "Student Name 3 (PRN: ____________)\n"
-        "Student Name 4 (PRN: ____________)"
+        "1. Tanisha Surendra Chavare (PRN: 2023026008)\n"
+        "2. Rasika Rudrappa Punoji (PRN: 2023026049)\n"
+        "3. Pradnya Dattatray Yejare (PRN: 2023026041)\n"
+        "4. Pranjali Bhimrao Jadhav (PRN: 2023026016)\n"
+        "5. Dinesh Nagesh Pillay (PRN: 2023026047)"
     )
     r = p_students.add_run(students_text)
     r.font.size = Pt(12)
@@ -112,7 +113,7 @@ def create_report():
     inst_text = (
         "D Y Patil Education Society, (Deemed to be University), Kolhapur\n"
         "School Of Engineering And Management\n"
-        "Computer Science And Engineering\n"
+        "Department of Data Sciences Engineering\n"
         "Academic Year: 2026-27"
     )
     r = p_inst.add_run(inst_text)
@@ -141,7 +142,13 @@ def create_report():
     )
     r.font.size = Pt(12)
 
-    for st in ["Student Name 1 (PRN: ____________)", "Student Name 2 (PRN: ____________)", "Student Name 3 (PRN: ____________)", "Student Name 4 (PRN: ____________)"]:
+    for st in [
+        "Tanisha Surendra Chavare (PRN: 2023026008)",
+        "Rasika Rudrappa Punoji (PRN: 2023026049)",
+        "Pradnya Dattatray Yejare (PRN: 2023026041)",
+        "Pranjali Bhimrao Jadhav (PRN: 2023026016)",
+        "Dinesh Nagesh Pillay (PRN: 2023026047)"
+    ]:
         p_st = doc.add_paragraph()
         p_st.paragraph_format.left_indent = Inches(0.5)
         p_st.paragraph_format.space_after = Pt(2)
@@ -152,9 +159,9 @@ def create_report():
     p_cert_body2 = doc.add_paragraph()
     p_cert_body2.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     p_cert_body2.paragraph_format.space_before = Pt(10)
-    p_cert_body2.paragraph_format.space_after = Pt(40)
+    p_cert_body2.paragraph_format.space_after = Pt(30)
     r = p_cert_body2.add_run(
-        "Final Year Computer Science & Engineering students, in partial fulfillment of the requirements for the course "
+        "Final Year Data Sciences Engineering students, in partial fulfillment of the requirements for the course "
         "Project (23CSEU7J12) during the academic year 2026-27.\n\n"
         "The project work has been carried out under our supervision and guidance."
     )
@@ -166,7 +173,7 @@ def create_report():
     tbl_sig.autofit = False
 
     sigs = [
-        ("Dr. S. K. Kulkarni\nProject Guide", "GVO TBP\nHead of Department"),
+        ("Dr. S. K. Kulkarni\nProject Guide", "Prof. T. B. Patil Sir\nHead of Department (DSE Dept.)"),
         ("Dr. __________________\nExternal Examiner", "Dr. A. S. Patil\nDirector, DYPSEM")
     ]
     for row_idx, row_data in enumerate(sigs):
@@ -175,7 +182,7 @@ def create_report():
             cell.width = Inches(3.1)
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.paragraph_format.space_before = Pt(30)
+            p.paragraph_format.space_before = Pt(25)
             p.paragraph_format.space_after = Pt(10)
             r = p.add_run(text)
             r.font.size = Pt(11)
@@ -207,19 +214,20 @@ def create_report():
     r.font.size = Pt(12)
 
     p_gm = doc.add_paragraph()
-    p_gm.paragraph_format.space_before = Pt(20)
+    p_gm.paragraph_format.space_before = Pt(16)
     p_gm.paragraph_format.space_after = Pt(6)
     r = p_gm.add_run("Group Members:")
     r.font.size = Pt(12)
     r.bold = True
 
-    tbl_dec = doc.add_table(rows=4, cols=2)
+    tbl_dec = doc.add_table(rows=5, cols=2)
     tbl_dec.alignment = WD_TABLE_ALIGNMENT.CENTER
     members = [
-        "1. Student Name 1 (PRN: ____________)",
-        "2. Student Name 2 (PRN: ____________)",
-        "3. Student Name 3 (PRN: ____________)",
-        "4. Student Name 4 (PRN: ____________)"
+        "1. Tanisha Surendra Chavare (PRN: 2023026008)",
+        "2. Rasika Rudrappa Punoji (PRN: 2023026049)",
+        "3. Pradnya Dattatray Yejare (PRN: 2023026041)",
+        "4. Pranjali Bhimrao Jadhav (PRN: 2023026016)",
+        "5. Dinesh Nagesh Pillay (PRN: 2023026047)"
     ]
     for idx, mem in enumerate(members):
         cell_m = tbl_dec.cell(idx, 0)
@@ -227,16 +235,16 @@ def create_report():
         cell_m.width = Inches(3.8)
         cell_s.width = Inches(2.4)
         pm = cell_m.paragraphs[0]
-        pm.paragraph_format.space_after = Pt(8)
+        pm.paragraph_format.space_after = Pt(6)
         rm = pm.add_run(mem)
         rm.font.size = Pt(11)
         ps = cell_s.paragraphs[0]
-        ps.paragraph_format.space_after = Pt(8)
+        ps.paragraph_format.space_after = Pt(6)
         rs = ps.add_run("Signature: ___________________")
         rs.font.size = Pt(11)
 
     p_place = doc.add_paragraph()
-    p_place.paragraph_format.space_before = Pt(24)
+    p_place.paragraph_format.space_before = Pt(20)
     p_place.paragraph_format.space_after = Pt(4)
     r = p_place.add_run("Place: Kolhapur\nDate: 23rd November 2026")
     r.font.size = Pt(11)
@@ -264,8 +272,8 @@ def create_report():
         "encouragement throughout the project. Their expertise and technical insights have been instrumental in shaping this work.\n\n"
         "We extend our heartfelt thanks for the constructive feedback and suggestions provided during the periodic review assessments, "
         "which significantly elevated the architectural robustness and security standards of our project.\n\n"
-        "We are profoundly thankful to GVO TBP, Head of Department, and the distinguished faculty members of the Computer Science & "
-        "Engineering Department for providing us with the necessary computing infrastructure, lab resources, and academic environment.\n\n"
+        "We are profoundly thankful to Prof. T. B. Patil Sir, Head of Department of Data Sciences Engineering (DSE), and the distinguished "
+        "faculty members for providing us with the necessary computing infrastructure, lab resources, and academic environment.\n\n"
         "We also acknowledge the continuous moral support of our family and friends who encouraged us throughout this journey.\n\n"
         "Finally, we thank the School of Engineering and Management, D Y Patil Education Society, Kolhapur for providing us with this "
         "valuable opportunity to apply our technical engineering knowledge to solve critical, real-world societal problems."
@@ -276,7 +284,14 @@ def create_report():
     p_ack_gm = doc.add_paragraph()
     p_ack_gm.paragraph_format.space_before = Pt(16)
     p_ack_gm.paragraph_format.space_after = Pt(4)
-    r = p_ack_gm.add_run("Group Members:\n• Student Name 1\n• Student Name 2\n• Student Name 3\n• Student Name 4")
+    r = p_ack_gm.add_run(
+        "Group Members:\n"
+        "• Tanisha Surendra Chavare (PRN: 2023026008)\n"
+        "• Rasika Rudrappa Punoji (PRN: 2023026049)\n"
+        "• Pradnya Dattatray Yejare (PRN: 2023026041)\n"
+        "• Pranjali Bhimrao Jadhav (PRN: 2023026016)\n"
+        "• Dinesh Nagesh Pillay (PRN: 2023026047)"
+    )
     r.font.size = Pt(11)
     r.bold = True
 
@@ -927,3 +942,4 @@ def create_report():
 
 if __name__ == '__main__':
     create_report()
+

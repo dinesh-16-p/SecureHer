@@ -269,6 +269,10 @@ def build_word_document():
 
     # Output paths
     output_files = [
+        "Project_Reports/SecureHer_Comprehensive_70Page_Project_Report.docx",
+        "Project_Reports/SecureHer_College_Project_Report.docx",
+        "Project_Reports/SecureHer_Final_Project_Report.docx",
+        "Project_Reports/SecureHer_Project_Report_Live.docx",
         "SecureHer_Comprehensive_70Page_Project_Report.docx",
         "SecureHer_College_Project_Report.docx",
         "SecureHer_Final_Project_Report.docx",

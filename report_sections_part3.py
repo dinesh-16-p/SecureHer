@@ -932,8 +932,8 @@ def build_part3_pages(story, S):
 
     story.append(Paragraph(
         "<b>Institutional Dissertation Certification:</b> This project report represents the culmination of research, software design, "
-        "and empirical testing conducted for the course <i>Project (23CSEU7J12)</i> at the Department of Computer Science & Engineering, "
-        "D. Y. Patil Education Society (Deemed to be University), Kolhapur. All code and documentation are archived under the SecureHer repository.", S['Callout']
+        "and empirical testing conducted for the course <i>Project (23CSEU7J12)</i> at the Department of Data Sciences Engineering / "
+        "Computer Science & Engineering, D. Y. Patil Education Society (Deemed to be University), Kolhapur. All code and documentation are archived under the SecureHer repository.", S['Callout']
     ))
 
     print("Part 3 (Pages 47 to 70) built successfully.")

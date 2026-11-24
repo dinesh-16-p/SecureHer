@@ -18,9 +18,10 @@ def build_part1_pages(story, S):
     story.append(HRFlowable(width="80%", thickness=1.5, color=SECONDARY, spaceBefore=4, spaceAfter=14))
 
     meta_tbl_data = [
-        [Paragraph("<b>Author Students:</b>", S['Bullet']), Paragraph("Student Name 1 (PRN: 2023CSE01)<br/>Student Name 2 (PRN: 2023CSE02)<br/>Student Name 3 (PRN: 2023CSE03)<br/>Student Name 4 (PRN: 2023CSE04)", S['Body'])],
+        [Paragraph("<b>Author Students:</b>", S['Bullet']), Paragraph("1. Tanisha Surendra Chavare (PRN: 2023026008)<br/>2. Rasika Rudrappa Punoji (PRN: 2023026049)<br/>3. Pradnya Dattatray Yejare (PRN: 2023026041)<br/>4. Pranjali Bhimrao Jadhav (PRN: 2023026016)<br/>5. Dinesh Nagesh Pillay (PRN: 2023026047)", S['Body'])],
         [Paragraph("<b>Project Guide:</b>", S['Bullet']), Paragraph("<b>Dr. S. K. Kulkarni</b><br/>Assistant Professor, Department of Computer Science & Engineering", S['Body'])],
-        [Paragraph("<b>Institutional Department:</b>", S['Bullet']), Paragraph("Department of Computer Science & Engineering / Data Sciences Engineering", S['Body'])],
+        [Paragraph("<b>Head of Department:</b>", S['Bullet']), Paragraph("<b>Prof. T. B. Patil Sir</b><br/>Head of Department, Department of Data Sciences Engineering", S['Body'])],
+        [Paragraph("<b>Institutional Department:</b>", S['Bullet']), Paragraph("Department of Data Sciences Engineering (DSE) / Computer Science & Engineering", S['Body'])],
         [Paragraph("<b>Affiliated Institution:</b>", S['Bullet']), Paragraph("School of Engineering and Management<br/><b>D Y Patil Education Society, (Deemed to be University), Kolhapur</b>", S['Body'])],
         [Paragraph("<b>Academic Session:</b>", S['Bullet']), Paragraph("Academic Year 2026-27 | Final Year B.Tech Dissertation", S['Body'])],
         [Paragraph("<b>Live Deployment:</b>", S['Bullet']), Paragraph("Production Progressive Web Application: <u>https://her-a955f.web.app</u>", S['Body'])]
@@ -30,16 +31,16 @@ def build_part1_pages(story, S):
         ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
         ('BOX', (0,0), (-1,-1), 1, PRIMARY),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 5),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 8))
 
     logo_path = 'extracted_template_media/word/media/image1.png'
     if os.path.exists(logo_path):
-        story.append(RLImage(logo_path, width=220, height=66))
-    story.append(Spacer(1, 10))
+        story.append(RLImage(logo_path, width=200, height=58))
+    story.append(Spacer(1, 6))
     story.append(Paragraph("<b>D Y Patil Education Society (Deemed to be University), Kolhapur</b><br/>Recognized by UGC & Accredited with 'A' Grade<br/>Kasaba Bawada, Kolhapur, Maharashtra 416006", S['CoverSubtitle']))
     story.append(PageBreak())
 
@@ -60,37 +61,38 @@ def build_part1_pages(story, S):
 
     stud_table_data = [
         [Paragraph("<b>Sr. No.</b>", S['Bullet']), Paragraph("<b>Student Name</b>", S['Bullet']), Paragraph("<b>PRN Number</b>", S['Bullet']), Paragraph("<b>Branch / Specialization</b>", S['Bullet'])],
-        [Paragraph("1", S['Body']), Paragraph("Student Name 1", S['Body']), Paragraph("PRN: 2023CSE01", S['Body']), Paragraph("Computer Science & Engineering", S['Body'])],
-        [Paragraph("2", S['Body']), Paragraph("Student Name 2", S['Body']), Paragraph("PRN: 2023CSE02", S['Body']), Paragraph("Computer Science & Engineering", S['Body'])],
-        [Paragraph("3", S['Body']), Paragraph("Student Name 3", S['Body']), Paragraph("PRN: 2023CSE03", S['Body']), Paragraph("Computer Science & Engineering", S['Body'])],
-        [Paragraph("4", S['Body']), Paragraph("Student Name 4", S['Body']), Paragraph("PRN: 2023CSE04", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])]
+        [Paragraph("1", S['Body']), Paragraph("Tanisha Surendra Chavare", S['Body']), Paragraph("PRN: 2023026008", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
+        [Paragraph("2", S['Body']), Paragraph("Rasika Rudrappa Punoji", S['Body']), Paragraph("PRN: 2023026049", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
+        [Paragraph("3", S['Body']), Paragraph("Pradnya Dattatray Yejare", S['Body']), Paragraph("PRN: 2023026041", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
+        [Paragraph("4", S['Body']), Paragraph("Pranjali Bhimrao Jadhav", S['Body']), Paragraph("PRN: 2023026016", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
+        [Paragraph("5", S['Body']), Paragraph("Dinesh Nagesh Pillay", S['Body']), Paragraph("PRN: 2023026047", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])]
     ]
     stud_tbl = Table(stud_table_data, colWidths=[45, 150, 120, 165])
     stud_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), BG_ALT),
         ('BOX', (0,0), (-1,-1), 1, PRIMARY),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+        ('TOPPADDING', (0,0), (-1,-1), 3),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
     ]))
     story.append(stud_tbl)
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 10))
 
     story.append(Paragraph(
         "The project work has been rigorously performed under our direct continuous supervision and meets the academic and "
         "technical benchmarks mandated by the university board of studies. The platform code, hardware telephony integration, "
         "live geolocation engines, and backend cloud services have been thoroughly audited and verified.", S['Body']
     ))
-    story.append(Spacer(1, 35))
+    story.append(Spacer(1, 16))
 
     sig_data = [
-        [Paragraph("<b>Dr. S. K. Kulkarni</b><br/>Project Guide<br/>Asst. Professor, CSE Dept.", S['Bullet']), Paragraph("<b>GVO TBP</b><br/>Head of Department<br/>Dept. of Computer Science & Engg.", S['Bullet'])],
+        [Paragraph("<b>Dr. S. K. Kulkarni</b><br/>Project Guide<br/>Asst. Professor, CSE Dept.", S['Bullet']), Paragraph("<b>Prof. T. B. Patil Sir</b><br/>Head of Department<br/>Dept. of Data Sciences Engineering", S['Bullet'])],
         [Paragraph("<br/><br/><b>Dr. _______________________</b><br/>External Examiner<br/>Board of Examination", S['Bullet']), Paragraph("<br/><br/><b>Dr. A. S. Patil</b><br/>Director<br/>School of Engg. & Management", S['Bullet'])]
     ]
     sig_tbl = Table(sig_data, colWidths=[240, 240])
     sig_tbl.setStyle(TableStyle([
-        ('TOPPADDING', (0,0), (-1,-1), 8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
     ]))
     story.append(sig_tbl)
     story.append(PageBreak())
@@ -106,37 +108,38 @@ def build_part1_pages(story, S):
         "Society, Kolhapur</b>, is an authentic record of our own original engineering work carried out during the academic "
         "year 2026-27 under the guidance of <b>Dr. S. K. Kulkarni</b>, Assistant Professor, Department of Computer Science & Engineering.", S['Body']
     ))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
     story.append(Paragraph(
         "We affirm that the analytical models, architectural frameworks, software implementations, native telephony Android bridging code, "
         "geodesic algorithms, and empirical test data presented in this report have been developed by our project group. Any concepts, "
         "third-party open-source libraries (React, MapLibre GL, Vite, FastAPI), or external cloud APIs (Brevo, Firebase, OpenStreetMap) "
         "utilized in this engineering effort have been duly credited and cited in the bibliography.", S['Body']
     ))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 6))
     story.append(Paragraph(
         "We further declare that this dissertation has not been previously submitted, either in whole or in part, to this or any other "
         "university, institute, or examining board for the award of any degree, diploma, fellowship, or professional certification.", S['Body']
     ))
-    story.append(Spacer(1, 20))
+    story.append(Spacer(1, 10))
 
     dec_sig_data = [
         [Paragraph("<b>Candidate Name & PRN</b>", S['Bullet']), Paragraph("<b>Academic Department</b>", S['Bullet']), Paragraph("<b>Signature & Date</b>", S['Bullet'])],
-        [Paragraph("Student Name 1<br/>PRN: 2023CSE01", S['Body']), Paragraph("Computer Science & Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("Student Name 2<br/>PRN: 2023CSE02", S['Body']), Paragraph("Computer Science & Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("Student Name 3<br/>PRN: 2023CSE03", S['Body']), Paragraph("Computer Science & Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("Student Name 4<br/>PRN: 2023CSE04", S['Body']), Paragraph("Data Sciences Engineering", S['Body']), Paragraph("_______________________", S['Body'])]
+        [Paragraph("1. Tanisha Surendra Chavare<br/>PRN: 2023026008", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
+        [Paragraph("2. Rasika Rudrappa Punoji<br/>PRN: 2023026049", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
+        [Paragraph("3. Pradnya Dattatray Yejare<br/>PRN: 2023026041", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
+        [Paragraph("4. Pranjali Bhimrao Jadhav<br/>PRN: 2023026016", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
+        [Paragraph("5. Dinesh Nagesh Pillay<br/>PRN: 2023026047", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])]
     ]
-    dec_tbl = Table(dec_sig_data, colWidths=[160, 160, 160])
+    dec_tbl = Table(dec_sig_data, colWidths=[165, 155, 160])
     dec_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), BG_ALT),
         ('BOX', (0,0), (-1,-1), 1, PRIMARY),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(dec_tbl)
-    story.append(Spacer(1, 25))
+    story.append(Spacer(1, 14))
     story.append(Paragraph("<b>Place:</b> Kolhapur, Maharashtra<br/><b>Date:</b> 23rd November 2026", S['Body']))
     story.append(PageBreak())
 
@@ -149,32 +152,39 @@ def build_part1_pages(story, S):
         "The successful completion of this mission-critical capstone engineering project, <b>SecureHer</b>, has been an immensely "
         "rewarding journey made possible by the wisdom, technical guidance, and generous institutional support of many individuals.", S['Body']
     ))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 5))
     story.append(Paragraph(
         "First and foremost, we express our profound gratitude to our project guide, <b>Dr. S. K. Kulkarni</b>, Assistant Professor, "
         "Department of Computer Science & Engineering. His profound domain knowledge in distributed systems, real-time protocols, "
         "and security architectures guided us through critical design roadblocks. His constructive feedback during our iterative sprints "
         "directly resulted in our breakthrough offline telephony SMS bridge and sub-25m satellite GPS acquisition algorithms.", S['Body']
     ))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 5))
     story.append(Paragraph(
-        "We are deeply indebted to <b>GVO TBP</b>, Head of the Department of Computer Science & Engineering, for providing continuous "
+        "We are deeply indebted to <b>Prof. T. B. Patil Sir</b>, Head of Department (HOD of DSE Department), for providing continuous "
         "administrative patronage, high-performance computing laboratory facilities, and access to developer cloud infrastructure. "
         "We thank our departmental faculty colleagues whose technical discussions helped shape our data isolation strategies.", S['Body']
     ))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 5))
     story.append(Paragraph(
         "We convey our sincere thanks to <b>Dr. A. S. Patil</b>, Director of the School of Engineering and Management, and the higher "
         "management of <b>D Y Patil Education Society (Deemed to be University), Kolhapur</b>, for fostering an academic atmosphere "
         "where engineering students are motivated to build solutions for real-world humanitarian and civic safety challenges.", S['Body']
     ))
-    story.append(Spacer(1, 6))
+    story.append(Spacer(1, 5))
     story.append(Paragraph(
         "Finally, we express our heartfelt appreciation to our parents, family members, and friends whose unwavering moral and emotional "
         "support sustained us through late-night programming, system testing, and deployment cycles.", S['Body']
     ))
-    story.append(Spacer(1, 15))
-    story.append(Paragraph("<b>Project Research Group:</b><br/>Student Name 1, Student Name 2, Student Name 3, Student Name 4<br/>B.Tech Final Year, Computer Science & Engineering", S['Callout']))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph(
+        "<b>Project Research Group (B.Tech Final Year, Data Sciences Engineering):</b><br/>"
+        "1. Tanisha Surendra Chavare (PRN: 2023026008)<br/>"
+        "2. Rasika Rudrappa Punoji (PRN: 2023026049)<br/>"
+        "3. Pradnya Dattatray Yejare (PRN: 2023026041)<br/>"
+        "4. Pranjali Bhimrao Jadhav (PRN: 2023026016)<br/>"
+        "5. Dinesh Nagesh Pillay (PRN: 2023026047)", S['Callout']
+    ))
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════

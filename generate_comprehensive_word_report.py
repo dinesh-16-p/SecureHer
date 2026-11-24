@@ -178,9 +178,17 @@ def create_full_report():
     p_inst.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_inst.paragraph_format.space_after = Pt(16)
     r = p_inst.add_run(
-        "Department of Computer Science & Engineering\n"
+        "Department of Data Sciences Engineering (DSE)\n"
         "School of Engineering and Management\n"
         "D. Y. Patil Education Society (Deemed to be University), Kolhapur\n"
+        "Head of Department: Prof. T. B. Patil Sir\n"
+        "Project Guide: Dr. S. K. Kulkarni\n\n"
+        "Author Students:\n"
+        "1. Tanisha Surendra Chavare (PRN: 2023026008)\n"
+        "2. Rasika Rudrappa Punoji (PRN: 2023026049)\n"
+        "3. Pradnya Dattatray Yejare (PRN: 2023026041)\n"
+        "4. Pranjali Bhimrao Jadhav (PRN: 2023026016)\n"
+        "5. Dinesh Nagesh Pillay (PRN: 2023026047)\n\n"
         "Academic Year 2026-27 | Production Deployment: https://her-a955f.web.app"
     )
     r.font.size = Pt(11)
@@ -192,10 +200,19 @@ def create_full_report():
     add_title("CERTIFICATE OF BONAFIDE WORK")
     add_body(
         "This is to certify that the project entitled \"SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID EMERGENCY "
-        "RESPONSE PLATFORM\" is a bonafide record of original work carried out by the final year students of Bachelor of Technology "
-        "in Computer Science & Engineering / Data Sciences Engineering at School of Engineering and Management, D Y Patil Education "
+        "RESPONSE PLATFORM\" is a bonafide record of original work carried out by the following final year students of Bachelor of Technology "
+        "in Data Sciences Engineering at School of Engineering and Management, D Y Patil Education "
         "Society (Deemed to be University), Kolhapur, submitted in partial fulfillment of the requirements for the course "
-        "Project (23CSEU7J12) during academic year 2026-27 under our supervision and guidance."
+        "Project (23CSEU7J12) during academic year 2026-27:\n"
+        "• 1. Tanisha Surendra Chavare (PRN: 2023026008)\n"
+        "• 2. Rasika Rudrappa Punoji (PRN: 2023026049)\n"
+        "• 3. Pradnya Dattatray Yejare (PRN: 2023026041)\n"
+        "• 4. Pranjali Bhimrao Jadhav (PRN: 2023026016)\n"
+        "• 5. Dinesh Nagesh Pillay (PRN: 2023026047)\n\n"
+        "The project work has been conducted under our direct supervision and guidance:\n"
+        "Project Guide: Dr. S. K. Kulkarni, Assistant Professor\n"
+        "Head of Department: Prof. T. B. Patil Sir, HOD of DSE Department\n"
+        "Director, DYPSEM: Dr. A. S. Patil"
     )
     doc.add_page_break()
 
@@ -203,8 +220,8 @@ def create_full_report():
     add_title("DECLARATION & ACKNOWLEDGEMENT")
     add_body(
         "We hereby declare that the work presented in this dissertation is original and carried out by us under the guidance of "
-        "Dr. S. K. Kulkarni. We express our profound gratitude to our guide, the Head of Department, and the University administration "
-        "for their continuous encouragement and institutional support."
+        "Dr. S. K. Kulkarni. We express our profound gratitude to our guide, to Prof. T. B. Patil Sir (Head of Department of Data Sciences Engineering), "
+        "and the University administration for their continuous encouragement and institutional support."
     )
     doc.add_page_break()
 

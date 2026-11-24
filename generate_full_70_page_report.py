@@ -158,9 +158,18 @@ def generate_70_page_report():
             actual_pages = len(page_matches)
             print(f"Verified actual page objects in PDF: {actual_pages}")
             
-        # Also copy to SecureHer_Project_Report_Live.pdf
-        shutil.copyfile(output_filename, live_filename)
-        print(f"Successfully copied to {live_filename}")
+        # Copy to destinations
+        targets = [
+            live_filename,
+            "Project_Reports/SecureHer_Comprehensive_70Page_Project_Report.pdf",
+            "Project_Reports/SecureHer_Project_Report_Live.pdf",
+            "public/SecureHer_Comprehensive_70Page_Project_Report.pdf",
+            "public/SecureHer_Project_Report_Live.pdf"
+        ]
+        for target in targets:
+            os.makedirs(os.path.dirname(target) or '.', exist_ok=True)
+            shutil.copyfile(output_filename, target)
+            print(f"Successfully copied to {target}")
         return actual_pages
     else:
         print("Error: Output file not created.")
