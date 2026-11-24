@@ -17,14 +17,15 @@ const LoginPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password) {
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password) {
       setError('Please enter both email and password.');
       return;
     }
     try {
       setError('');
       setLoading(true);
-      await login(email, password);
+      await login(cleanEmail, password);
       navigate('/dashboard');
     } catch (err) {
       setError(parseAuthError(err));
@@ -126,6 +127,9 @@ const LoginPage = () => {
               <input
                 type="email"
                 required
+                autoComplete="email"
+                autoCapitalize="none"
+                spellCheck="false"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
@@ -154,6 +158,7 @@ const LoginPage = () => {
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"

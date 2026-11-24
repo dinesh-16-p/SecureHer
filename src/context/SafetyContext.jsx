@@ -398,14 +398,28 @@ export const SafetyProvider = ({ children }) => {
       const recipientPhones = validPhoneContacts.map((c) => c.phone);
       const recipientUids = validPhoneContacts.map((c) => c.id);
 
-      // Email recipients resolution
+      // Email recipients resolution: emergency contacts -> user profile emergency email -> account email
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const validEmailContacts = (emergencyContacts || [])
+      let validEmailContacts = (emergencyContacts || [])
         .filter((c) => c.email && emailRegex.test(c.email.trim()))
         .map((c) => ({
           email: c.email.trim(),
           name: c.name?.trim() || 'Emergency Contact'
         }));
+
+      if (userProfile?.emergencyContactEmail && emailRegex.test(userProfile.emergencyContactEmail.trim())) {
+        const profEmail = userProfile.emergencyContactEmail.trim();
+        if (!validEmailContacts.some((c) => c.email.toLowerCase() === profEmail.toLowerCase())) {
+          validEmailContacts.push({ email: profEmail, name: 'Primary SOS Alert Contact' });
+        }
+      }
+
+      if (validEmailContacts.length === 0 && (user?.email || userProfile?.email)) {
+        const fallbackEmail = (user?.email || userProfile?.email).trim();
+        if (emailRegex.test(fallbackEmail)) {
+          validEmailContacts.push({ email: fallbackEmail, name: userName });
+        }
+      }
       const recipientEmails = validEmailContacts.map((c) => c.email);
 
       if (user) {

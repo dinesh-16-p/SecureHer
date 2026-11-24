@@ -173,11 +173,17 @@ const EMPTY_FALLBACK_PIXEL = {
 export function configureMapMissingImageResolver(map) {
   if (!map) return;
 
+  // Pre-add common missing icon identifiers like space or empty string
+  try {
+    if (!map.hasImage('')) map.addImage('', EMPTY_FALLBACK_PIXEL);
+    if (!map.hasImage(' ')) map.addImage(' ', EMPTY_FALLBACK_PIXEL);
+  } catch (_) {}
+
   // 1. Primary resolver API (MapLibre GL v3+)
   if (typeof map.setMissingStyleImageResolver === 'function') {
     try {
       map.setMissingStyleImageResolver((id) => {
-        if (!map.hasImage(id)) {
+        if (id != null && !map.hasImage(id)) {
           try {
             map.addImage(id, EMPTY_FALLBACK_PIXEL);
           } catch (_) {}
@@ -190,7 +196,7 @@ export function configureMapMissingImageResolver(map) {
   if (typeof map.on === 'function') {
     map.on('styleimagemissing', (e) => {
       const id = e?.id;
-      if (id && !map.hasImage(id)) {
+      if (id != null && !map.hasImage(id)) {
         try {
           map.addImage(id, EMPTY_FALLBACK_PIXEL);
         } catch (_) {}

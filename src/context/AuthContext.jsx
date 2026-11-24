@@ -21,7 +21,7 @@ export const parseAuthError = (error) => {
     case 'auth/user-not-found':
     case 'auth/wrong-password':
     case 'auth/invalid-credential':
-      return 'Invalid email or password.';
+      return 'Invalid email or password. If you do not have an account yet, please click "Create Account" below.';
     case 'auth/email-already-in-use':
       return 'An account with this email already exists.';
     case 'auth/invalid-email':

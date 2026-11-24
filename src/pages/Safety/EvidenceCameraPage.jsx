@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Camera, Video, Shield, StopCircle, RefreshCw, CheckCircle2, AlertTriangle, Eye, Lock, MapPin, EyeOff } from 'lucide-react';
+import { Camera, Video, Shield, StopCircle, RefreshCw, CheckCircle2, AlertTriangle, Eye, Lock, MapPin, SwitchCamera } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
@@ -14,6 +14,7 @@ const EvidenceCameraPage = () => {
 
   const [stream, setStream] = useState(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [facingMode, setFacingMode] = useState('environment'); // 'environment' (back) | 'user' (front)
   const [isRecording, setIsRecording] = useState(false);
   const [recordTimer, setRecordTimer] = useState(0);
   const [permissionError, setPermissionError] = useState(null);
@@ -53,16 +54,24 @@ const EvidenceCameraPage = () => {
     return () => clearInterval(interval);
   }, [isRecording]);
 
-  const startCamera = async () => {
+  const startCamera = async (targetFacing = facingMode) => {
     setPermissionError(null);
     try {
-      const mediaStream = await requestCameraStream(true);
+      const mediaStream = await requestCameraStream({ facingMode: { ideal: targetFacing } });
       setStream(mediaStream);
       setCameraActive(true);
       refreshPermissions();
     } catch (err) {
-      setPermissionError(err.message || 'Camera permission was denied. Please allow camera access in your browser settings.');
-      setCameraActive(false);
+      // Fallback without strict facing constraint if browser denies or has single camera
+      try {
+        const fallbackStream = await requestCameraStream(true);
+        setStream(fallbackStream);
+        setCameraActive(true);
+        refreshPermissions();
+      } catch (e) {
+        setPermissionError(e.message || 'Camera permission was denied. Please allow camera access in your browser settings.');
+        setCameraActive(false);
+      }
     }
   };
 
@@ -73,6 +82,33 @@ const EvidenceCameraPage = () => {
     }
     setCameraActive(false);
     setIsRecording(false);
+  };
+
+  // Flip Camera between Back ('environment') and Front ('user')
+  const handleFlipCamera = async () => {
+    if (isRecording) {
+      setPermissionError('Please stop video recording before switching cameras.');
+      return;
+    }
+    const newFacing = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(newFacing);
+
+    if (stream) {
+      stream.getTracks().forEach((t) => t.stop());
+      setStream(null);
+    }
+
+    try {
+      const newStream = await requestCameraStream({ facingMode: { ideal: newFacing } });
+      setStream(newStream);
+    } catch (err) {
+      try {
+        const fallbackStream = await requestCameraStream(true);
+        setStream(fallbackStream);
+      } catch (e) {
+        setPermissionError('Could not switch camera: ' + e.message);
+      }
+    }
   };
 
   const capturePhoto = async () => {
@@ -93,6 +129,7 @@ const EvidenceCameraPage = () => {
       const evidenceItem = {
         id: 'ev_' + Date.now(),
         type: 'photo',
+        cameraFacing: facingMode,
         mimeType: 'image/jpeg',
         data: dataUrl,
         byteSize,
@@ -102,7 +139,7 @@ const EvidenceCameraPage = () => {
         latitude: currentLocation?.latitude ?? null,
         longitude: currentLocation?.longitude ?? null,
         accuracy: currentLocation?.accuracy ?? null,
-        note: 'Snapshot captured during safety event'
+        note: `Snapshot captured via ${facingMode === 'environment' ? 'back' : 'front'} camera`
       };
 
       saveEvidenceLocally(evidenceItem);
@@ -145,6 +182,7 @@ const EvidenceCameraPage = () => {
             const evidenceItem = {
               id: 'ev_' + Date.now(),
               type: 'video',
+              cameraFacing: facingMode,
               mimeType: 'video/webm',
               data: dataUrl,
               byteSize,
@@ -154,7 +192,7 @@ const EvidenceCameraPage = () => {
               latitude: currentLocation?.latitude ?? null,
               longitude: currentLocation?.longitude ?? null,
               accuracy: currentLocation?.accuracy ?? null,
-              note: 'Video incident recording'
+              note: `Video incident recording via ${facingMode === 'environment' ? 'back' : 'front'} camera`
             };
             saveEvidenceLocally(evidenceItem);
             setLastCaptured(evidenceItem);
@@ -200,7 +238,7 @@ const EvidenceCameraPage = () => {
           Incident Evidence Camera
         </h1>
         <p style={{ color: 'var(--color-text-muted)', fontSize: '1.05rem' }}>
-          Real-time incident documentation stored locally on your device with cryptographic timestamps and GPS watermark.
+          Real-time incident documentation with back/front camera toggle, stored locally on your device with cryptographic timestamps and GPS watermark.
         </p>
       </div>
 
@@ -215,7 +253,15 @@ const EvidenceCameraPage = () => {
                   autoPlay
                   playsInline
                   muted
-                  style={{ width: '100%', height: '100%', minHeight: '420px', maxHeight: '520px', objectFit: 'cover', display: 'block' }}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    minHeight: '420px',
+                    maxHeight: '520px',
+                    objectFit: 'cover',
+                    display: 'block',
+                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                  }}
                 />
               ) : (
                 <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#FFFFFF' }}>
@@ -237,38 +283,70 @@ const EvidenceCameraPage = () => {
                     Camera Standby
                   </h3>
                   <p style={{ fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.75)', maxWidth: '420px', margin: '0 auto 1.5rem auto' }}>
-                    Click below to request camera access and initiate incident recording. Permission is only requested when you open the camera.
+                    Click below to open the camera (defaults to your phone's back camera for incident evidence recording).
                   </p>
-                  <Button variant="secondary" icon={Camera} onClick={startCamera}>
-                    Enable & Open Camera
+                  <Button variant="secondary" icon={Camera} onClick={() => startCamera(facingMode)}>
+                    Open Evidence Camera ({facingMode === 'environment' ? 'Back' : 'Front'})
                   </Button>
                 </div>
               )}
 
               {/* Live Overlay Badges */}
               {cameraActive && (
-                <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.5rem', zIndex: 5 }}>
-                  <span style={{ backgroundColor: 'rgba(0,0,0,0.75)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Lock size={12} color="var(--color-secondary)" /> Local Storage Only
-                  </span>
-                  {isRecording && (
-                    <span style={{ backgroundColor: 'var(--color-emergency)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 800 }}>
-                      ● REC {Math.floor(recordTimer / 60)}:{(recordTimer % 60).toString().padStart(2, '0')}
+                <>
+                  <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.5rem', zIndex: 5, flexWrap: 'wrap' }}>
+                    <span style={{ backgroundColor: 'rgba(0,0,0,0.75)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <Lock size={12} color="var(--color-secondary)" /> Local Storage Only
                     </span>
-                  )}
-                  {!hasMic && (
-                    <span style={{ backgroundColor: 'rgba(237, 108, 2, 0.85)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
-                      Video Only (No Mic)
+                    <span style={{ backgroundColor: 'rgba(91, 33, 79, 0.85)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                      {facingMode === 'environment' ? '📷 Back Camera' : '🤳 Front Camera'}
                     </span>
-                  )}
-                </div>
+                    {isRecording && (
+                      <span style={{ backgroundColor: 'var(--color-emergency)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 800 }}>
+                        ● REC {Math.floor(recordTimer / 60)}:{(recordTimer % 60).toString().padStart(2, '0')}
+                      </span>
+                    )}
+                    {!hasMic && (
+                      <span style={{ backgroundColor: 'rgba(237, 108, 2, 0.85)', color: '#FFFFFF', padding: '0.3rem 0.65rem', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 700 }}>
+                        Video Only (No Mic)
+                      </span>
+                    )}
+                  </div>
+
+                  {/* On-screen Flip Camera Button */}
+                  <button
+                    onClick={handleFlipCamera}
+                    disabled={isRecording}
+                    title="Switch between front and back camera"
+                    style={{
+                      position: 'absolute',
+                      top: '1rem',
+                      right: '1rem',
+                      zIndex: 6,
+                      background: 'rgba(0,0,0,0.75)',
+                      color: '#FFFFFF',
+                      border: '1px solid rgba(255,255,255,0.4)',
+                      borderRadius: '50%',
+                      width: '42px',
+                      height: '42px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: isRecording ? 'not-allowed' : 'pointer',
+                      transition: 'all 0.2s',
+                      opacity: isRecording ? 0.5 : 1
+                    }}
+                  >
+                    <RefreshCw size={20} color="var(--color-accent)" />
+                  </button>
+                </>
               )}
             </div>
 
             {/* Camera Control Bar */}
             {cameraActive && (
               <div style={{ padding: '1.25rem 1.5rem', backgroundColor: '#FFFFFF', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                   <Button variant="primary" icon={Camera} onClick={capturePhoto} disabled={isRecording}>
                     Take Photo
                   </Button>
@@ -281,6 +359,16 @@ const EvidenceCameraPage = () => {
                       Stop Recording
                     </Button>
                   )}
+                  {/* Flip Camera Button */}
+                  <Button
+                    variant="outline"
+                    icon={RefreshCw}
+                    onClick={handleFlipCamera}
+                    disabled={isRecording}
+                    title="Flip camera (Back / Front)"
+                  >
+                    Flip Camera ({facingMode === 'environment' ? 'To Front' : 'To Back'})
+                  </Button>
                 </div>
                 <Button variant="ghost" size="sm" onClick={stopCamera}>
                   Turn Off Camera
@@ -305,6 +393,12 @@ const EvidenceCameraPage = () => {
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', fontSize: '0.875rem' }}>
               <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-sm)' }}>
+                <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>🔄 Back/Front Camera Recording</div>
+                <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
+                  Use your phone's back camera to record surroundings or switch to front camera with one tap.
+                </div>
+              </div>
+              <div style={{ padding: '0.75rem', backgroundColor: 'var(--color-background)', borderRadius: 'var(--radius-sm)' }}>
                 <div style={{ fontWeight: 700, color: 'var(--color-primary)' }}>🔐 Device Vault Sandbox</div>
                 <div style={{ color: 'var(--color-text-muted)', fontSize: '0.8rem', marginTop: '0.2rem' }}>
                   Captured media is stored strictly in your browser's private local storage. No media is uploaded to cloud servers.
@@ -325,7 +419,7 @@ const EvidenceCameraPage = () => {
                 <CheckCircle2 size={16} /> {lastCaptured.type === 'photo' ? 'Photo' : 'Video'} Saved to Vault
               </div>
               <div style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)' }}>
-                Captured: {lastCaptured.formattedTime}
+                Captured: {lastCaptured.formattedTime} ({lastCaptured.cameraFacing === 'environment' ? 'Back Camera' : 'Front Camera'})
               </div>
             </Card>
           )}
