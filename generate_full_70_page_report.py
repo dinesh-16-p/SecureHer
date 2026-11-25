@@ -129,6 +129,18 @@ def setup_styles():
         'Caption', parent=base['Normal'], fontName='Times-Italic', fontSize=7.8, leading=10,
         textColor=PRIMARY, alignment=1, spaceBefore=2, spaceAfter=5
     )
+    styles['TableCaption'] = ParagraphStyle(
+        'TableCaption', parent=base['Normal'], fontName='Times-Bold', fontSize=8.5, leading=11,
+        textColor=PRIMARY, spaceBefore=3, spaceAfter=3
+    )
+    styles['FigureCaption'] = ParagraphStyle(
+        'FigureCaption', parent=base['Normal'], fontName='Times-Bold', fontSize=8.5, leading=11,
+        textColor=PRIMARY, alignment=1, spaceBefore=3, spaceAfter=4
+    )
+    styles['AlgorithmTitle'] = ParagraphStyle(
+        'AlgorithmTitle', parent=base['Heading3'], fontName='Times-Bold', fontSize=9.5, leading=12.5,
+        textColor=PRIMARY, spaceBefore=4, spaceAfter=2
+    )
     styles['Callout'] = ParagraphStyle(
         'Callout', parent=base['Normal'], fontName='Times-Roman', fontSize=8.2, leading=11.5,
         textColor=DARK_TEXT, backColor=BG_LIGHT, borderPadding=5, spaceAfter=4
