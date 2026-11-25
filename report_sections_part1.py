@@ -10,17 +10,17 @@ BORDER_COLOR = colors.HexColor("#999999")
 
 def build_part1_pages(story, S):
     # ═════════════════════════════════════════════════════════════════════════
-    # PAGE 1: TITLE / COVER PAGE (Strictly Formatted as per University Example)
+    # PAGE 1: TITLE / COVER PAGE (Strictly Text-Only as per University Format)
     # ═════════════════════════════════════════════════════════════════════════
-    story.append(Spacer(1, 15))
+    story.append(Spacer(1, 25))
     story.append(Paragraph("<b>SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID EMERGENCY RESPONSE PLATFORM</b>", S['CoverTitle']))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("<b>Project Report</b>", S['CoverSubtitle']))
-    story.append(Spacer(1, 4))
-    story.append(Paragraph("Submitted in partial fulfillment of the requirements for the course <b>Project (23CSEU7J12)</b>", S['BodyCenter']))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("<b>By</b>", S['BodyCenterBold']))
+    story.append(Paragraph("<b>Project Report</b>", S['CoverSubtitle']))
     story.append(Spacer(1, 6))
+    story.append(Paragraph("Submitted in partial fulfillment of the requirements for the course <b>Project (23CSEU7J12)</b>", S['BodyCenter']))
+    story.append(Spacer(1, 18))
+    story.append(Paragraph("<b>By</b>", S['BodyCenterBold']))
+    story.append(Spacer(1, 8))
     story.append(Paragraph(
         "<b>Tanisha Surendra Chavare</b> (PRN: 2023026008)<br/>"
         "<b>Rasika Rudrappa Punoji</b> (PRN: 2023026049)<br/>"
@@ -28,18 +28,11 @@ def build_part1_pages(story, S):
         "<b>Pranjali Bhimrao Jadhav</b> (PRN: 2023026016)<br/>"
         "<b>Dinesh Nagesh Pillay</b> (PRN: 2023026047)", S['BodyCenter']
     ))
-    story.append(Spacer(1, 14))
+    story.append(Spacer(1, 24))
     story.append(Paragraph("<b>Under the Guidance of</b>", S['BodyCenterBold']))
-    story.append(Spacer(1, 4))
+    story.append(Spacer(1, 6))
     story.append(Paragraph("<b>Prof. T. B. Patil</b><br/>Project Guide, Data Sciences Engineering", S['BodyCenter']))
-    story.append(Spacer(1, 16))
-
-    logo_path = 'Project_Reports/dyp_logo.png'
-    if not os.path.exists(logo_path):
-        logo_path = 'extracted_template_media/word/media/image1.png'
-    if os.path.exists(logo_path):
-        story.append(RLImage(logo_path, width=240, height=73))
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 45))
 
     story.append(Paragraph(
         "<b>D Y Patil Education Society, (Deemed to be University), Kolhapur</b><br/>"
@@ -49,7 +42,7 @@ def build_part1_pages(story, S):
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════
-    # PAGE 2: CERTIFICATE (Bonafide Work)
+    # PAGE 2: CERTIFICATE (Bonafide Work - No Tables)
     # ═════════════════════════════════════════════════════════════════════════
     story.append(Paragraph("<b>CERTIFICATE</b>", S['ChapHeaderCenter']))
     story.append(Spacer(1, 14))
@@ -74,22 +67,25 @@ def build_part1_pages(story, S):
     story.append(Paragraph(
         "The project work has been carried out under our supervision and guidance.", S['Body']
     ))
-    story.append(Spacer(1, 45))
+    story.append(Spacer(1, 35))
 
-    sig_data = [
-        [Paragraph("<b>Prof. T. B. Patil</b><br/>Project Guide & Head of Department<br/>Data Sciences Engineering", S['Body']),
-         Paragraph("<b>Dr. _______________________</b><br/>External Examiner<br/>Board of Examination", S['Body'])],
-        [Paragraph("<br/><br/>", S['Body']),
-         Paragraph("<br/><br/><b>Dr. A. S. Patil</b><br/>Director, DYPSEM<br/>School of Engineering & Management", S['Body'])]
-    ]
-    sig_tbl = Table(sig_data, colWidths=[240, 240])
-    sig_tbl.setStyle(TableStyle([
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(sig_tbl)
+    story.append(Paragraph(
+        "<b>Prof. T. B. Patil</b><br/>"
+        "Project Guide &amp; Head of Department<br/>"
+        "Department of Data Sciences Engineering", S['Body']
+    ))
+    story.append(Spacer(1, 22))
+    story.append(Paragraph(
+        "<b>Dr. _______________________</b><br/>"
+        "External Examiner<br/>"
+        "Board of Examination", S['Body']
+    ))
+    story.append(Spacer(1, 22))
+    story.append(Paragraph(
+        "<b>Dr. A. S. Patil</b><br/>"
+        "Director, DYPSEM<br/>"
+        "School of Engineering and Management", S['Body']
+    ))
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -194,23 +190,17 @@ def build_part1_pages(story, S):
     ))
     story.append(Spacer(1, 10))
     story.append(Paragraph("<b>Keywords:</b> Women Safety, Multi-Channel SOS, Hardware Telephony SMS, Brevo Transactional Email, MapLibre GL, Geodesic GPS Accuracy, Trusted Journey Engine, Firebase Firestore, Progressive Web App (PWA).", S['Callout']))
-    story.append(Spacer(1, 8))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph("<b>Keywords:</b> Women's Safety, Multi-Channel SOS, Hardware Telephony SMS, Brevo Transactional Email, MapLibre GL, Geodesic GPS Accuracy, Trusted Journey Engine, Firebase Firestore, Progressive Web App (PWA).", S['Callout']))
+    story.append(Spacer(1, 12))
 
-    tax_data = [
-        [Paragraph("<b>Domain Classification</b>", S['Bullet']), Paragraph("Information Technology & Mobile Telematics (Safety & Security)", S['Body'])],
-        [Paragraph("<b>Software Architectural Pattern</b>", S['Bullet']), Paragraph("Decoupled Multi-Tier Reactive Architecture (SPA + REST + Native Bridge)", S['Body'])],
-        [Paragraph("<b>Production Hosting Target</b>", S['Bullet']), Paragraph("Google Cloud Firebase Edge CDN (Project: <code>her-a955f</code>)", S['Body'])],
-        [Paragraph("<b>Primary Source Repository</b>", S['Bullet']), Paragraph("GitHub (<code>https://github.com/dinesh-16-p/SecureHer.git</code>)", S['Body'])]
-    ]
-    tax_tbl = Table(tax_data, colWidths=[160, 320])
-    tax_tbl.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BG_ALT),
-        ('BOX', (0,0), (-1,-1), 1, BORDER_COLOR),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(tax_tbl)
+    story.append(Paragraph(
+        "<b>System Architecture &amp; Engineering Taxonomy:</b><br/>"
+        "• <b>Domain Classification:</b> Information Technology &amp; Mobile Telematics (Safety &amp; Security)<br/>"
+        "• <b>Software Architectural Pattern:</b> Decoupled Multi-Tier Reactive Architecture (SPA + REST + Native Bridge)<br/>"
+        "• <b>Production Hosting Target:</b> Google Cloud Firebase Edge CDN (Project: <code>her-a955f</code>)<br/>"
+        "• <b>Primary Source Repository:</b> GitHub (<code>https://github.com/dinesh-16-p/SecureHer.git</code>)", S['Body']
+    ))
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════
@@ -253,7 +243,7 @@ def build_part1_pages(story, S):
     tbl_toc1.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ('TOPPADDING', (0,0), (-1,-1), 2.5),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -302,7 +292,7 @@ def build_part1_pages(story, S):
     tbl_toc2.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ('TOPPADDING', (0,0), (-1,-1), 2.5),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -339,7 +329,7 @@ def build_part1_pages(story, S):
     tbl_fig = Table(fig_data, colWidths=[65, 365, 50])
     tbl_fig.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), BG_ALT),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2),
         ('TOPPADDING', (0,0), (-1,-1), 2),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -365,7 +355,7 @@ def build_part1_pages(story, S):
     tbl_tbl = Table(tbl_data, colWidths=[65, 365, 50])
     tbl_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), BG_ALT),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2),
         ('TOPPADDING', (0,0), (-1,-1), 2),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -445,7 +435,7 @@ def build_part1_pages(story, S):
     t1_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ('TOPPADDING', (0,0), (-1,-1), 4),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -831,7 +821,7 @@ def build_part1_pages(story, S):
     t2_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2.2),
         ('TOPPADDING', (0,0), (-1,-1), 2.2),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -910,7 +900,7 @@ def build_part1_pages(story, S):
     tbl_fr1.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ('TOPPADDING', (0,0), (-1,-1), 4),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -947,7 +937,7 @@ def build_part1_pages(story, S):
     tbl_fr2.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 4),
         ('TOPPADDING', (0,0), (-1,-1), 4),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
@@ -1027,7 +1017,7 @@ def build_part1_pages(story, S):
     t3_tbl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), PRIMARY),
         ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+        ('FONTNAME', (0,0), (-1,0), 'Times-Bold'),
         ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
         ('TOPPADDING', (0,0), (-1,-1), 2.5),
         ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
