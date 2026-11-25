@@ -104,35 +104,32 @@ def build_word_document():
         section.left_margin = Inches(0.75)
         section.right_margin = Inches(0.75)
 
-        # Header
+        # Header completely removed as per university requirements
         header = section.header
+        header.is_linked_to_previous = False
         hp = header.paragraphs[0]
-        hp.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        hrun = hp.add_run("SecureHer — Intelligent Real-Time Women's Safety & Emergency Response Platform (23CSEU7J12)")
-        hrun.font.name = 'Times New Roman'
-        hrun.font.size = Pt(8.5)
-        hrun.font.color.rgb = RGBColor(91, 33, 79)
+        hp.text = ""
 
-        # Footer
+        # Footer (Data Sciences Engineering) - Strict Black & White
         footer = section.footer
         fp = footer.paragraphs[0]
         fp.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        frun = fp.add_run("D. Y. Patil Education Society, Kolhapur — Department of Computer Science & Engineering")
+        frun = fp.add_run("D. Y. Patil Education Society, Kolhapur — Data Sciences Engineering")
         frun.font.name = 'Times New Roman'
         frun.font.size = Pt(8.5)
-        frun.font.color.rgb = RGBColor(99, 85, 100)
+        frun.font.color.rgb = RGBColor(70, 70, 70)
 
     # Base styling
     normal_style = doc.styles['Normal']
     normal_style.font.name = 'Times New Roman'
     normal_style.font.size = Pt(10.5)
-    normal_style.font.color.rgb = RGBColor(34, 27, 36)
+    normal_style.font.color.rgb = RGBColor(0, 0, 0)
     normal_style.paragraph_format.line_spacing = 1.15
     normal_style.paragraph_format.space_after = Pt(3)
 
-    c_primary = RGBColor(91, 33, 79)
-    c_secondary = RGBColor(199, 91, 122)
-    c_dark = RGBColor(34, 27, 36)
+    c_primary = RGBColor(0, 0, 0)
+    c_secondary = RGBColor(40, 40, 40)
+    c_dark = RGBColor(0, 0, 0)
 
     print("Converting Flowables to native Word elements...")
     page_count = 1
@@ -165,6 +162,28 @@ def build_word_document():
                 p.paragraph_format.space_before = Pt(12)
                 p.paragraph_format.space_after = Pt(4)
                 add_paragraph_runs(p, runs, 'Times New Roman', 13.5, c_primary)
+            elif style_name == 'ChapHeaderCenter':
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.paragraph_format.space_before = Pt(12)
+                p.paragraph_format.space_after = Pt(4)
+                add_paragraph_runs(p, runs, 'Times New Roman', 13.5, c_primary)
+            elif style_name == 'BodyCenter':
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.paragraph_format.space_after = Pt(3)
+                add_paragraph_runs(p, runs, 'Times New Roman', 10, c_dark)
+            elif style_name == 'BodyCenterBold':
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                p.paragraph_format.space_after = Pt(3)
+                add_paragraph_runs(p, runs, 'Times New Roman', 10.5, c_primary)
+            elif style_name == 'BodyIndent':
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                p.paragraph_format.left_indent = Inches(0.35)
+                p.paragraph_format.space_after = Pt(3)
+                add_paragraph_runs(p, runs, 'Times New Roman', 10, c_dark)
+            elif style_name == 'BodyBold':
+                p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                p.paragraph_format.space_after = Pt(3)
+                add_paragraph_runs(p, runs, 'Times New Roman', 10, c_primary)
             elif style_name == 'SecHeader':
                 p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                 p.paragraph_format.space_before = Pt(8)
@@ -219,7 +238,7 @@ def build_word_document():
 
             for r_idx, row in enumerate(raw_data):
                 is_header = (r_idx == 0 and num_rows > 2)
-                bg_hex = "F4ECF2" if is_header else ("FAF6F9" if r_idx % 2 == 1 else "FFFFFF")
+                bg_hex = "EAEAEA" if is_header else ("F8F8F8" if r_idx % 2 == 1 else "FFFFFF")
 
                 for c_idx, cell_val in enumerate(row):
                     cell = tbl.cell(r_idx, c_idx)

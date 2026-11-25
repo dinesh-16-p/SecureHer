@@ -43,50 +43,51 @@ class NumberedCanvas70(canvas.Canvas):
 
         self.saveState()
         self.setFont("Helvetica", 8)
-        self.setFillColor(colors.HexColor("#5B214F"))
 
-        # Running Header (pages 2-70)
-        self.setStrokeColor(colors.HexColor("#D8C5D3"))
-        self.setLineWidth(0.6)
-        self.line(54, A4[1] - 38, A4[0] - 54, A4[1] - 38)
-        self.drawString(54, A4[1] - 32, "SecureHer — Intelligent Real-Time Women's Safety & Emergency Response Platform")
-        self.drawRightString(A4[0] - 54, A4[1] - 32, "Final Year Project (23CSEU7J12)")
+        # Running Header completely removed as per university requirements
+        # (Header removed; names & institutional metadata present on Page 1)
 
-        # Running Footer (pages 2-70)
+        # Running Footer (pages 2-70) - Strict Black & White
+        self.setStrokeColor(colors.HexColor("#777777"))
+        self.setLineWidth(0.5)
         self.line(54, 42, A4[0] - 54, 42)
-        self.setFillColor(colors.HexColor("#635564"))
-        self.drawString(54, 30, "D. Y. Patil Education Society, Kolhapur — Dept. of Computer Science & Engineering")
+        self.setFillColor(colors.HexColor("#333333"))
+        self.drawString(54, 30, "D. Y. Patil Education Society, Kolhapur — Data Sciences Engineering")
         
         self.setFont("Helvetica-Bold", 8)
-        self.setFillColor(colors.HexColor("#5B214F"))
+        self.setFillColor(colors.HexColor("#000000"))
         self.drawRightString(A4[0] - 54, 30, f"Page {self._pageNumber} of {page_count}")
         self.restoreState()
 
-# Palette definition
-PRIMARY = colors.HexColor("#5B214F")
-SECONDARY = colors.HexColor("#C75B7A")
-DARK_TEXT = colors.HexColor("#221B24")
-MUTED_TEXT = colors.HexColor("#5C4D5D")
-BG_LIGHT = colors.HexColor("#FAF6F9")
-BG_ALT = colors.HexColor("#F4ECF2")
-BORDER_COLOR = colors.HexColor("#E2D3DF")
-SUCCESS_GREEN = colors.HexColor("#2E7D32")
-ALERT_RED = colors.HexColor("#D92D3A")
+# Palette definition - Strict Black & White / Grayscale
+PRIMARY = colors.HexColor("#000000")
+SECONDARY = colors.HexColor("#333333")
+DARK_TEXT = colors.HexColor("#000000")
+MUTED_TEXT = colors.HexColor("#444444")
+BG_LIGHT = colors.HexColor("#F8F8F8")
+BG_ALT = colors.HexColor("#EFEFEF")
+BORDER_COLOR = colors.HexColor("#999999")
+SUCCESS_GREEN = colors.HexColor("#000000")
+ALERT_RED = colors.HexColor("#000000")
 
 def setup_styles():
     base = getSampleStyleSheet()
     styles = {}
     styles['CoverTitle'] = ParagraphStyle(
-        'CoverTitle', parent=base['Heading1'], fontName='Helvetica-Bold', fontSize=20, leading=24,
-        textColor=PRIMARY, alignment=1, spaceAfter=8
+        'CoverTitle', parent=base['Heading1'], fontName='Helvetica-Bold', fontSize=17, leading=22,
+        textColor=PRIMARY, alignment=1, spaceAfter=6
     )
     styles['CoverSubtitle'] = ParagraphStyle(
         'CoverSubtitle', parent=base['Normal'], fontName='Helvetica', fontSize=11, leading=15,
-        textColor=SECONDARY, alignment=1, spaceAfter=14
+        textColor=DARK_TEXT, alignment=1, spaceAfter=6
     )
     styles['ChapHeader'] = ParagraphStyle(
         'ChapHeader', parent=base['Heading1'], fontName='Helvetica-Bold', fontSize=14, leading=17,
         textColor=PRIMARY, spaceBefore=0, spaceAfter=4, keepWithNext=True
+    )
+    styles['ChapHeaderCenter'] = ParagraphStyle(
+        'ChapHeaderCenter', parent=base['Heading1'], fontName='Helvetica-Bold', fontSize=14, leading=17,
+        textColor=PRIMARY, alignment=1, spaceBefore=0, spaceAfter=4, keepWithNext=True
     )
     styles['SecHeader'] = ParagraphStyle(
         'SecHeader', parent=base['Heading2'], fontName='Helvetica-Bold', fontSize=11.5, leading=14.5,
@@ -99,6 +100,22 @@ def setup_styles():
     styles['Body'] = ParagraphStyle(
         'Body', parent=base['Normal'], fontName='Helvetica', fontSize=8.5, leading=12,
         textColor=DARK_TEXT, alignment=4, spaceAfter=4
+    )
+    styles['BodyCenter'] = ParagraphStyle(
+        'BodyCenter', parent=base['Normal'], fontName='Helvetica', fontSize=9.5, leading=14,
+        textColor=DARK_TEXT, alignment=1, spaceAfter=3
+    )
+    styles['BodyCenterBold'] = ParagraphStyle(
+        'BodyCenterBold', parent=base['Normal'], fontName='Helvetica-Bold', fontSize=10.5, leading=14,
+        textColor=DARK_TEXT, alignment=1, spaceAfter=3
+    )
+    styles['BodyIndent'] = ParagraphStyle(
+        'BodyIndent', parent=base['Normal'], fontName='Helvetica', fontSize=9, leading=14,
+        textColor=DARK_TEXT, leftIndent=25, spaceAfter=3
+    )
+    styles['BodyBold'] = ParagraphStyle(
+        'BodyBold', parent=base['Normal'], fontName='Helvetica-Bold', fontSize=9.5, leading=13,
+        textColor=DARK_TEXT, spaceAfter=3
     )
     styles['Bullet'] = ParagraphStyle(
         'Bullet', parent=base['Normal'], fontName='Helvetica', fontSize=8.2, leading=11.5,

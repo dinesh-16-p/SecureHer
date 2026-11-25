@@ -2,15 +2,15 @@ import os
 from reportlab.lib import colors
 from reportlab.platypus import Paragraph, PageBreak, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
 
-PRIMARY = colors.HexColor("#5B214F")
-SECONDARY = colors.HexColor("#C75B7A")
-DARK_TEXT = colors.HexColor("#221B24")
-MUTED_TEXT = colors.HexColor("#5C4D5D")
-BG_LIGHT = colors.HexColor("#FAF6F9")
-BG_ALT = colors.HexColor("#F4ECF2")
-BORDER_COLOR = colors.HexColor("#E2D3DF")
-SUCCESS_GREEN = colors.HexColor("#2E7D32")
-ALERT_RED = colors.HexColor("#D92D3A")
+PRIMARY = colors.HexColor("#000000")
+SECONDARY = colors.HexColor("#333333")
+DARK_TEXT = colors.HexColor("#000000")
+MUTED_TEXT = colors.HexColor("#444444")
+BG_LIGHT = colors.HexColor("#F8F8F8")
+BG_ALT = colors.HexColor("#EFEFEF")
+BORDER_COLOR = colors.HexColor("#999999")
+SUCCESS_GREEN = colors.HexColor("#000000")
+ALERT_RED = colors.HexColor("#000000")
 
 def build_part2_pages(story, S):
     # ═════════════════════════════════════════════════════════════════════════

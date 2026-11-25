@@ -2,188 +2,165 @@ import os
 from reportlab.lib import colors
 from reportlab.platypus import Paragraph, PageBreak, Spacer, Table, TableStyle, Image as RLImage, HRFlowable
 
-PRIMARY = colors.HexColor("#5B214F")
-SECONDARY = colors.HexColor("#C75B7A")
-BG_LIGHT = colors.HexColor("#FAF6F9")
-BG_ALT = colors.HexColor("#F4ECF2")
-BORDER_COLOR = colors.HexColor("#E2D3DF")
+PRIMARY = colors.HexColor("#000000")
+SECONDARY = colors.HexColor("#333333")
+BG_LIGHT = colors.HexColor("#F8F8F8")
+BG_ALT = colors.HexColor("#EFEFEF")
+BORDER_COLOR = colors.HexColor("#999999")
 
 def build_part1_pages(story, S):
     # ═════════════════════════════════════════════════════════════════════════
-    # PAGE 1: TITLE / COVER PAGE
+    # PAGE 1: TITLE / COVER PAGE (Strictly Formatted as per University Example)
     # ═════════════════════════════════════════════════════════════════════════
+    story.append(Spacer(1, 15))
+    story.append(Paragraph("<b>SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID EMERGENCY RESPONSE PLATFORM</b>", S['CoverTitle']))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("<b>Project Report</b>", S['CoverSubtitle']))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("Submitted in partial fulfillment of the requirements for the course <b>Project (23CSEU7J12)</b>", S['BodyCenter']))
     story.append(Spacer(1, 10))
-    story.append(Paragraph("SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID EMERGENCY RESPONSE PLATFORM", S['CoverTitle']))
-    story.append(Paragraph("Project Report Submitted in Partial Fulfillment of the Requirements for Course <b>Project (23CSEU7J12)</b>", S['CoverSubtitle']))
-    story.append(HRFlowable(width="80%", thickness=1.5, color=SECONDARY, spaceBefore=4, spaceAfter=14))
-
-    meta_tbl_data = [
-        [Paragraph("<b>Author Students:</b>", S['Bullet']), Paragraph("1. Tanisha Surendra Chavare (PRN: 2023026008)<br/>2. Rasika Rudrappa Punoji (PRN: 2023026049)<br/>3. Pradnya Dattatray Yejare (PRN: 2023026041)<br/>4. Pranjali Bhimrao Jadhav (PRN: 2023026016)<br/>5. Dinesh Nagesh Pillay (PRN: 2023026047)", S['Body'])],
-        [Paragraph("<b>Project Guide:</b>", S['Bullet']), Paragraph("<b>Dr. S. K. Kulkarni</b><br/>Assistant Professor, Department of Computer Science & Engineering", S['Body'])],
-        [Paragraph("<b>Head of Department:</b>", S['Bullet']), Paragraph("<b>Prof. T. B. Patil Sir</b><br/>Head of Department, Department of Data Sciences Engineering", S['Body'])],
-        [Paragraph("<b>Institutional Department:</b>", S['Bullet']), Paragraph("Department of Data Sciences Engineering (DSE) / Computer Science & Engineering", S['Body'])],
-        [Paragraph("<b>Affiliated Institution:</b>", S['Bullet']), Paragraph("School of Engineering and Management<br/><b>D Y Patil Education Society, (Deemed to be University), Kolhapur</b>", S['Body'])],
-        [Paragraph("<b>Academic Session:</b>", S['Bullet']), Paragraph("Academic Year 2026-27 | Final Year B.Tech Dissertation", S['Body'])],
-        [Paragraph("<b>Live Deployment:</b>", S['Bullet']), Paragraph("Production Progressive Web Application: <u>https://her-a955f.web.app</u>", S['Body'])]
-    ]
-    meta_table = Table(meta_tbl_data, colWidths=[130, 350])
-    meta_table.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,-1), BG_LIGHT),
-        ('BOX', (0,0), (-1,-1), 1, PRIMARY),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-    ]))
-    story.append(meta_table)
-    story.append(Spacer(1, 8))
-
-    logo_path = 'extracted_template_media/word/media/image1.png'
-    if os.path.exists(logo_path):
-        story.append(RLImage(logo_path, width=200, height=58))
+    story.append(Paragraph("<b>By</b>", S['BodyCenterBold']))
     story.append(Spacer(1, 6))
-    story.append(Paragraph("<b>D Y Patil Education Society (Deemed to be University), Kolhapur</b><br/>Recognized by UGC & Accredited with 'A' Grade<br/>Kasaba Bawada, Kolhapur, Maharashtra 416006", S['CoverSubtitle']))
+    story.append(Paragraph(
+        "<b>Tanisha Surendra Chavare</b> (PRN: 2023026008)<br/>"
+        "<b>Rasika Rudrappa Punoji</b> (PRN: 2023026049)<br/>"
+        "<b>Pradnya Dattatray Yejare</b> (PRN: 2023026041)<br/>"
+        "<b>Pranjali Bhimrao Jadhav</b> (PRN: 2023026016)<br/>"
+        "<b>Dinesh Nagesh Pillay</b> (PRN: 2023026047)", S['BodyCenter']
+    ))
+    story.append(Spacer(1, 14))
+    story.append(Paragraph("<b>Under the Guidance of</b>", S['BodyCenterBold']))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph("<b>Prof. T. B. Patil</b><br/>Project Guide, Data Sciences Engineering", S['BodyCenter']))
+    story.append(Spacer(1, 16))
+
+    logo_path = 'Project_Reports/dyp_logo.png'
+    if not os.path.exists(logo_path):
+        logo_path = 'extracted_template_media/word/media/image1.png'
+    if os.path.exists(logo_path):
+        story.append(RLImage(logo_path, width=240, height=73))
+    story.append(Spacer(1, 12))
+
+    story.append(Paragraph(
+        "<b>D Y Patil Education Society, (Deemed to be University), Kolhapur</b><br/>"
+        "<b>School of Engineering and Management Data Sciences Engineering</b><br/>"
+        "Academic Year: 2026-27", S['CoverSubtitle']
+    ))
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════
-    # PAGE 2: CERTIFICATE OF BONAFIDE WORK
+    # PAGE 2: CERTIFICATE (Bonafide Work)
     # ═════════════════════════════════════════════════════════════════════════
-    story.append(Paragraph("CERTIFICATE OF BONAFIDE WORK", S['ChapHeader']))
-    story.append(HRFlowable(width="100%", thickness=1, color=PRIMARY, spaceBefore=4, spaceAfter=14))
+    story.append(Paragraph("<b>CERTIFICATE</b>", S['ChapHeaderCenter']))
+    story.append(Spacer(1, 14))
     story.append(Paragraph(
-        "This is to certify that the project entitled <b>\"SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID "
-        "EMERGENCY RESPONSE PLATFORM\"</b> is a bonafide record of original work carried out by the following final year "
-        "students of Bachelor of Technology in <b>Computer Science & Engineering / Data Sciences Engineering</b> at the "
-        "<b>School of Engineering and Management, D Y Patil Education Society (Deemed to be University), Kolhapur</b>, "
-        "submitted in partial fulfillment of the academic requirements for the course <b>Project (23CSEU7J12)</b> during "
-        "the academic year <b>2026-27</b>:", S['Body']
+        "This is to certify that the Project titled <b>“SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID "
+        "EMERGENCY RESPONSE PLATFORM”</b> is a bonafide work carried out by:", S['Body']
     ))
     story.append(Spacer(1, 8))
-
-    stud_table_data = [
-        [Paragraph("<b>Sr. No.</b>", S['Bullet']), Paragraph("<b>Student Name</b>", S['Bullet']), Paragraph("<b>PRN Number</b>", S['Bullet']), Paragraph("<b>Branch / Specialization</b>", S['Bullet'])],
-        [Paragraph("1", S['Body']), Paragraph("Tanisha Surendra Chavare", S['Body']), Paragraph("PRN: 2023026008", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
-        [Paragraph("2", S['Body']), Paragraph("Rasika Rudrappa Punoji", S['Body']), Paragraph("PRN: 2023026049", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
-        [Paragraph("3", S['Body']), Paragraph("Pradnya Dattatray Yejare", S['Body']), Paragraph("PRN: 2023026041", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
-        [Paragraph("4", S['Body']), Paragraph("Pranjali Bhimrao Jadhav", S['Body']), Paragraph("PRN: 2023026016", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])],
-        [Paragraph("5", S['Body']), Paragraph("Dinesh Nagesh Pillay", S['Body']), Paragraph("PRN: 2023026047", S['Body']), Paragraph("Data Sciences Engineering", S['Body'])]
-    ]
-    stud_tbl = Table(stud_table_data, colWidths=[45, 150, 120, 165])
-    stud_tbl.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), BG_ALT),
-        ('BOX', (0,0), (-1,-1), 1, PRIMARY),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 3),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 3),
-    ]))
-    story.append(stud_tbl)
-    story.append(Spacer(1, 10))
-
     story.append(Paragraph(
-        "The project work has been rigorously performed under our direct continuous supervision and meets the academic and "
-        "technical benchmarks mandated by the university board of studies. The platform code, hardware telephony integration, "
-        "live geolocation engines, and backend cloud services have been thoroughly audited and verified.", S['Body']
+        "1. <b>Tanisha Surendra Chavare</b> (PRN: 2023026008)<br/>"
+        "2. <b>Rasika Rudrappa Punoji</b> (PRN: 2023026049)<br/>"
+        "3. <b>Pradnya Dattatray Yejare</b> (PRN: 2023026041)<br/>"
+        "4. <b>Pranjali Bhimrao Jadhav</b> (PRN: 2023026016)<br/>"
+        "5. <b>Dinesh Nagesh Pillay</b> (PRN: 2023026047)", S['BodyIndent']
     ))
-    story.append(Spacer(1, 16))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph(
+        "Final year <b>Data Sciences Engineering</b> students, in partial fulfillment of the requirements for the course "
+        "<b>Project (23CSEU7J12)</b> during the academic year <b>2026–27</b>.", S['Body']
+    ))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(
+        "The project work has been carried out under our supervision and guidance.", S['Body']
+    ))
+    story.append(Spacer(1, 45))
 
     sig_data = [
-        [Paragraph("<b>Dr. S. K. Kulkarni</b><br/>Project Guide<br/>Asst. Professor, CSE Dept.", S['Bullet']), Paragraph("<b>Prof. T. B. Patil Sir</b><br/>Head of Department<br/>Dept. of Data Sciences Engineering", S['Bullet'])],
-        [Paragraph("<br/><br/><b>Dr. _______________________</b><br/>External Examiner<br/>Board of Examination", S['Bullet']), Paragraph("<br/><br/><b>Dr. A. S. Patil</b><br/>Director<br/>School of Engg. & Management", S['Bullet'])]
+        [Paragraph("<b>Prof. T. B. Patil</b><br/>Project Guide & Head of Department<br/>Data Sciences Engineering", S['Body']),
+         Paragraph("<b>Dr. _______________________</b><br/>External Examiner<br/>Board of Examination", S['Body'])],
+        [Paragraph("<br/><br/>", S['Body']),
+         Paragraph("<br/><br/><b>Dr. A. S. Patil</b><br/>Director, DYPSEM<br/>School of Engineering & Management", S['Body'])]
     ]
     sig_tbl = Table(sig_data, colWidths=[240, 240])
     sig_tbl.setStyle(TableStyle([
-        ('TOPPADDING', (0,0), (-1,-1), 6),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING', (0,0), (-1,-1), 4),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
     ]))
     story.append(sig_tbl)
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════
-    # PAGE 3: DECLARATION OF ORIGINAL WORK
+    # PAGE 3: DECLARATION
     # ═════════════════════════════════════════════════════════════════════════
-    story.append(Paragraph("CANDIDATES' DECLARATION", S['ChapHeader']))
-    story.append(HRFlowable(width="100%", thickness=1, color=PRIMARY, spaceBefore=4, spaceAfter=14))
+    story.append(Paragraph("<b>DECLARATION</b>", S['ChapHeaderCenter']))
+    story.append(Spacer(1, 14))
     story.append(Paragraph(
-        "We hereby declare that the project dissertation entitled <b>\"SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND "
-        "RAPID EMERGENCY RESPONSE PLATFORM\"</b> submitted to the <b>School of Engineering and Management, D Y Patil Education "
-        "Society, Kolhapur</b>, is an authentic record of our own original engineering work carried out during the academic "
-        "year 2026-27 under the guidance of <b>Dr. S. K. Kulkarni</b>, Assistant Professor, Department of Computer Science & Engineering.", S['Body']
-    ))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(
-        "We affirm that the analytical models, architectural frameworks, software implementations, native telephony Android bridging code, "
-        "geodesic algorithms, and empirical test data presented in this report have been developed by our project group. Any concepts, "
-        "third-party open-source libraries (React, MapLibre GL, Vite, FastAPI), or external cloud APIs (Brevo, Firebase, OpenStreetMap) "
-        "utilized in this engineering effort have been duly credited and cited in the bibliography.", S['Body']
-    ))
-    story.append(Spacer(1, 6))
-    story.append(Paragraph(
-        "We further declare that this dissertation has not been previously submitted, either in whole or in part, to this or any other "
-        "university, institute, or examining board for the award of any degree, diploma, fellowship, or professional certification.", S['Body']
+        "We hereby declare that the Project titled <b>“SECUREHER: AN INTELLIGENT REAL-TIME WOMEN'S SAFETY AND RAPID "
+        "EMERGENCY RESPONSE PLATFORM”</b> submitted to the <b>School of Engineering and Management</b> is a record of work "
+        "carried out by us under the guidance of <b>Prof. T. B. Patil</b>.", S['Body']
     ))
     story.append(Spacer(1, 10))
-
-    dec_sig_data = [
-        [Paragraph("<b>Candidate Name & PRN</b>", S['Bullet']), Paragraph("<b>Academic Department</b>", S['Bullet']), Paragraph("<b>Signature & Date</b>", S['Bullet'])],
-        [Paragraph("1. Tanisha Surendra Chavare<br/>PRN: 2023026008", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("2. Rasika Rudrappa Punoji<br/>PRN: 2023026049", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("3. Pradnya Dattatray Yejare<br/>PRN: 2023026041", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("4. Pranjali Bhimrao Jadhav<br/>PRN: 2023026016", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])],
-        [Paragraph("5. Dinesh Nagesh Pillay<br/>PRN: 2023026047", S['Body']), Paragraph("Data Sciences Engg.", S['Body']), Paragraph("_______________________", S['Body'])]
-    ]
-    dec_tbl = Table(dec_sig_data, colWidths=[165, 155, 160])
-    dec_tbl.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), BG_ALT),
-        ('BOX', (0,0), (-1,-1), 1, PRIMARY),
-        ('INNERGRID', (0,0), (-1,-1), 0.5, BORDER_COLOR),
-        ('TOPPADDING', (0,0), (-1,-1), 4),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 4),
-    ]))
-    story.append(dec_tbl)
-    story.append(Spacer(1, 14))
-    story.append(Paragraph("<b>Place:</b> Kolhapur, Maharashtra<br/><b>Date:</b> 23rd November 2026", S['Body']))
+    story.append(Paragraph(
+        "The information and data provided in this report is authentic to the best of our knowledge. This project has not "
+        "been submitted to any other university or institution for the award of any degree or diploma.", S['Body']
+    ))
+    story.append(Spacer(1, 18))
+    story.append(Paragraph("<b>Group Members:</b>", S['BodyBold']))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "Tanisha Surendra Chavare<br/>"
+        "Rasika Rudrappa Punoji<br/>"
+        "Pradnya Dattatray Yejare<br/>"
+        "Pranjali Bhimrao Jadhav<br/>"
+        "Dinesh Nagesh Pillay", S['BodyIndent']
+    ))
+    story.append(Spacer(1, 40))
+    story.append(Paragraph("<b>Place:</b> Kolhapur<br/><b>Date:</b>", S['Body']))
     story.append(PageBreak())
 
     # ═════════════════════════════════════════════════════════════════════════
     # PAGE 4: ACKNOWLEDGEMENTS
     # ═════════════════════════════════════════════════════════════════════════
-    story.append(Paragraph("ACKNOWLEDGEMENTS", S['ChapHeader']))
-    story.append(HRFlowable(width="100%", thickness=1, color=PRIMARY, spaceBefore=4, spaceAfter=14))
+    story.append(Paragraph("<b>ACKNOWLEDGEMENT</b>", S['ChapHeaderCenter']))
+    story.append(Spacer(1, 14))
     story.append(Paragraph(
-        "The successful completion of this mission-critical capstone engineering project, <b>SecureHer</b>, has been an immensely "
-        "rewarding journey made possible by the wisdom, technical guidance, and generous institutional support of many individuals.", S['Body']
+        "We would like to express our sincere gratitude to all those who have contributed to the completion of this Project.", S['Body']
     ))
-    story.append(Spacer(1, 5))
+    story.append(Spacer(1, 8))
     story.append(Paragraph(
-        "First and foremost, we express our profound gratitude to our project guide, <b>Dr. S. K. Kulkarni</b>, Assistant Professor, "
-        "Department of Computer Science & Engineering. His profound domain knowledge in distributed systems, real-time protocols, "
-        "and security architectures guided us through critical design roadblocks. His constructive feedback during our iterative sprints "
-        "directly resulted in our breakthrough offline telephony SMS bridge and sub-25m satellite GPS acquisition algorithms.", S['Body']
+        "We are deeply grateful to our project guide, <b>Prof. T. B. Patil</b>, for his valuable guidance, continuous support, and "
+        "encouragement throughout this project. His feedback helped us shape the system design and improve the quality of our work.", S['Body']
     ))
-    story.append(Spacer(1, 5))
+    story.append(Spacer(1, 8))
     story.append(Paragraph(
-        "We are deeply indebted to <b>Prof. T. B. Patil Sir</b>, Head of Department (HOD of DSE Department), for providing continuous "
-        "administrative patronage, high-performance computing laboratory facilities, and access to developer cloud infrastructure. "
-        "We thank our departmental faculty colleagues whose technical discussions helped shape our data isolation strategies.", S['Body']
+        "We extend our thanks to the Head of Department and faculty members of the <b>Data Sciences Engineering Department</b> for "
+        "their suggestions and for providing the resources required to carry out this project.", S['Body']
     ))
-    story.append(Spacer(1, 5))
+    story.append(Spacer(1, 8))
     story.append(Paragraph(
-        "We convey our sincere thanks to <b>Dr. A. S. Patil</b>, Director of the School of Engineering and Management, and the higher "
-        "management of <b>D Y Patil Education Society (Deemed to be University), Kolhapur</b>, for fostering an academic atmosphere "
-        "where engineering students are motivated to build solutions for real-world humanitarian and civic safety challenges.", S['Body']
+        "We also acknowledge the support of our families and friends throughout the project.", S['Body']
     ))
-    story.append(Spacer(1, 5))
+    story.append(Spacer(1, 8))
     story.append(Paragraph(
-        "Finally, we express our heartfelt appreciation to our parents, family members, and friends whose unwavering moral and emotional "
-        "support sustained us through late-night programming, system testing, and deployment cycles.", S['Body']
+        "Finally, we thank <b>D. Y. Patil School of Engineering and Management</b> for providing us with the opportunity to undertake this project.", S['Body']
     ))
-    story.append(Spacer(1, 10))
+    story.append(Spacer(1, 8))
     story.append(Paragraph(
-        "<b>Project Research Group (B.Tech Final Year, Data Sciences Engineering):</b><br/>"
-        "1. Tanisha Surendra Chavare (PRN: 2023026008)<br/>"
-        "2. Rasika Rudrappa Punoji (PRN: 2023026049)<br/>"
-        "3. Pradnya Dattatray Yejare (PRN: 2023026041)<br/>"
-        "4. Pranjali Bhimrao Jadhav (PRN: 2023026016)<br/>"
-        "5. Dinesh Nagesh Pillay (PRN: 2023026047)", S['Callout']
+        "Finally, we thank the <b>School of Engineering and Management</b> for providing us with this opportunity to engage with the "
+        "community and apply our technical knowledge to propose a solution to real-world problems.", S['Body']
+    ))
+    story.append(Spacer(1, 16))
+    story.append(Paragraph("<b>Group Members:</b>", S['BodyBold']))
+    story.append(Spacer(1, 6))
+    story.append(Paragraph(
+        "Tanisha Surendra Chavare<br/>"
+        "Rasika Rudrappa Punoji<br/>"
+        "Pradnya Dattatray Yejare<br/>"
+        "Pranjali Bhimrao Jadhav<br/>"
+        "Dinesh Nagesh Pillay", S['BodyIndent']
     ))
     story.append(PageBreak())
 
